@@ -3,252 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DiamanteBot Dashboard</title>
+    <title>DiamanteBot Pro</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: #f4f6f9; height: 100vh; display: flex; flex-direction: column; color: #333; }
-        
-        .header { background: #007bff; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .status-badge { font-weight: bold; padding: 5px 10px; border-radius: 20px; background: rgba(0,0,0,0.2); }
-        
-        .control-panel { padding: 15px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 10px; }
-        .input-group { display: flex; gap: 8px; }
-        
-        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; }
-        input[type="text"]:focus { border-color: #007bff; }
-        
-        button { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; transition: background 0.2s; }
-        .btn-primary { background: #007bff; color: white; padding: 0 20px; }
-        .btn-primary:hover { background: #0056b3; }
-        .btn-play { background: #28a745; color: white; padding: 12px; width: 100%; font-size: 16px; }
-        .btn-play:hover { background: #218838; }
-        
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background-color: #f4f6f9; height: 100vh; display: flex; flex-direction: column; }
+        .header { background: #007bff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .control-panel { padding: 10px; background: #fff; border-bottom: 1px solid #ddd; display: flex; gap: 5px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .btn-primary { background: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; }
+        .btn-play { background: #28a745; color: white; padding: 10px; width: 100%; border: none; border-radius: 5px; margin-top: 5px; font-weight: bold; }
         .chat-container { flex: 1; padding: 15px; overflow-y: auto; background: #efeae2; display: flex; flex-direction: column; gap: 10px; }
-        
-        /* Balões de Mensagem */
-        .msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 15px; line-height: 1.4; position: relative; word-wrap: break-word; }
-        .msg.user { background: #d9fdd3; align-self: flex-end; border-top-right-radius: 0; }
-        .msg.bot { background: #ffffff; align-self: flex-start; border-top-left-radius: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .msg.system { background: #fff3cd; color: #856404; align-self: center; border-radius: 8px; font-size: 13px; text-align: center; max-width: 90%; }
-        
-        /* Ações do Balão */
-        .msg-actions { display: flex; gap: 8px; margin-top: 5px; justify-content: flex-end; }
-        .btn-action { background: transparent; color: #66)6; font-size: 12px; padding: 2px 5px; font-weight: normal; }
-        .btn-action:hover { color: #007bff; }
-        
-        /* Arquivos Gerados */
-        .file-list { padding: 10px; background: #fff; border-top: 1px solid #ddd; max-height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-        .file-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; background: #f8f9fa; padding: 5px 10px; border-radius: 5px; }
-        .file-item a { color: #007bff; text-decoration: none; font-weight: bold; }
-
-        .footer { padding: 12px; background: white; display: flex; align-items: center; gap: 8px; border-top: 1px solid #e0e0e0; }
-        .btn-icon { background: #f0f2f5; color: #54656f; padding: 12px; font-size: 18px; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
-        .btn-icon:hover { background: #e1e3e6; }
-        
-        /* Feedback Visual do Microfone */
-        #micBtn.recording { background: #dc3545 !important; color: white !important; animation: pulse 1.2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .msg { max-width: 85%; padding: 10px; border-radius: 10px; font-size: 14px; word-wrap: break-word; }
+        .msg.user { background: #d9fdd3; align-self: flex-end; }
+        .msg.bot { background: #ffffff; align-self: flex-start; }
+        .msg.system { background: #fff3cd; align-self: center; font-size: 12px; }
+        .msg-actions { margin-top: 5px; display: flex; gap: 10px; }
+        .btn-action { background: #eee; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+        .file-list { padding: 10px; background: #fff; border-top: 1px solid #ddd; }
+        .file-item { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .footer { padding: 10px; background: white; display: flex; align-items: center; gap: 5px; }
+        .btn-icon { background: #f0f2f5; border: none; padding: 10px; border-radius: 50%; font-size: 18px; }
+        #micBtn.recording { background: #dc3545; color: white; animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } }
     </style>
 </head>
 <body>
-    <div class="header">
-        <span>💎 <b>DiamanteBot Dashboard</b></span>
-        <span id="statusText" class="status-badge">🔴 Offline</span>
-    </div>
+    <div class="header"><span>💎 <b>DiamanteBot Pro</b></span><span id="statusText">🔴</span></div>
     
     <div class="control-panel">
-        <div class="input-group">
-            <input type="text" id="dirInput" placeholder="./data"
-            <button class="btn-primary" onclick="configurar()">OK</button>
-        </div>
-        <button class="btn-play" onclick="iniciar()">▶️ INICIAR MOTOR</button>
+        <input type="text" id="dirInput" placeholder="Caminho raiz...">
+        <button class="btn-primary" onclick="configurar()">OK</button>
     </div>
+    <button class="btn-play" onclick="iniciar()">▶️ INICIAR MOTOR</button>
 
-    <div class="main-content">
-        <div class="chat-container" id="chatContainer">
-            <div class="msg system">Configure a pasta raiz e inicie o motor para começar.</div>
-        </div>
-        
-        <!-- Área onde os arquivos criados pelo Bot vão aparecer -->
-        <div class="file-list" id="fileList" style="display: none;"></div>
+    <div class="chat-container" id="chatContainer">
+        <div class="msg system">Sistema pronto. Configure o caminho para começar.</div>
+    </div>
+    
+    <div class="file-list" id="fileList"></div>
 
-        <div class="footer">
-            <input type="file" id="fileInput" style="display:none" onchange="uploadArq()">
-            <button class="btn-icon" onclick="document.getElementById('fileInput').click()" title="Enviar Arquivo">📎</button>
-            <button class="btn-icon" id="micBtn" title="Segure para Gravar">🎤</button>
-            <input type="text" id="chatInput" placeholder="Digite uma mensagem..." onkeypress="verificarTecla(event)">
-            <button class="btn-icon" onclick="enviar()" style="background: #007bff; color: white;">➤</button>
-        </div>
+    <div class="footer">
+        <input type="file" id="fileInput" style="display:none" onchange="uploadArq()">
+        <button class="btn-icon" onclick="document.getElementById('fileInput').click()">📎</button>
+        <button class="btn-icon" id="micBtn">🎤</button>
+        <input type="text" id="chatInput" placeholder="Mensagem..." onkeypress="if(event.key==='Enter') enviar()">
+        <button class="btn-icon" onclick="enviar()" style="background: #007bff; color: white;">➤</button>
     </div>
 
     <script>
         const chatContainer = document.getElementById('chatContainer');
         const micBtn = document.getElementById('micBtn');
-        let mediaRecorder;
-        let audioChunks = [];
 
-        function appendMessage(sender, text, isHtml = false) {
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('msg', sender);
-            
-            if (isHtml) {
-                msgDiv.innerHTML = text;
-            } else {
-                msgDiv.innerText = text;
+        function appendMessage(sender, text) {
+            const div = document.createElement('div');
+            div.className = `msg ${sender}`;
+            div.innerText = text;
+            if(sender === 'bot') {
+                div.innerHTML += `<div class="msg-actions"><button class="btn-action" onclick="navigator.clipboard.writeText(\`${text}\`)">Copiar</button></div>`;
             }
-
-            if (sender === 'bot') {
-                const actionsDiv = document.createElement('div');
-                actionsDiv.classList.add('msg-actions');
-                actionsDiv.innerHTML = `<button class="btn-action" onclick="copiarTexto(this, \`${text.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)">Copiar</button>`;
-                msgDiv.appendChild(actionsDiv);
-            }
-
-            chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight; // Rolagem automática
-        }
-
-        function verificarTecla(e) {
-            if (e.key === 'Enter') enviar();
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         async function configurar() {
             const path = document.getElementById('dirInput').value;
-            if(!path) return alert('Insira um caminho válido.');
-            try {
-                const res = await fetch('/configurar', { 
-                    method: 'POST', 
-                    body: JSON.stringify({caminho: path}), 
-                    headers: {'Content-Type': 'application/json'} 
-                });
-                const data = await res.json();
-                if(data.success) {
-                    document.getElementById('statusText').innerText = '🟢 Online';
-                    document.getElementById('statusText').style.background = '#28a745';
-                    appendMessage('system', `Pasta sincronizada com sucesso: ${path}`);
-                    atualizarArquivos();
-                } else {
-                    alert('Erro ao configurar pasta: ' + data.msg);
-                }
-            } catch(e) { alert('Erro na conexão com o servidor.'); }
-        }
-
-        async function iniciar() {
-            try {
-                appendMessage('system', 'Iniciando o motor do bot...');
-                const res = await fetch('/iniciar', { method: 'POST' });
-                const data = await res.json();
-                appendMessage('bot', data.msg);
-            } catch(e) { appendMessage('system', 'Erro ao iniciar o motor.'); }
+            const res = await fetch('/configurar', { method:'POST', body: JSON.stringify({caminho: path}), headers:{'Content-Type':'application/json'} });
+            const data = await res.json();
+            if(data.success) { 
+                document.getElementById('statusText').innerText = '🟢';
+                appendMessage('system', 'Pasta configurada.');
+            }
         }
 
         async function enviar() {
             const input = document.getElementById('chatInput');
-            const msg = input.value.trim();
+            const msg = input.value;
             if(!msg) return;
-
             appendMessage('user', msg);
             input.value = '';
-
-            try {
-                const res = await fetch('/chat', { 
-                    method: 'POST', 
-                    body: JSON.stringify({mensagem: msg}), 
-                    headers: {'Content-Type': 'application/json'} 
-                });
-                const data = await res.json();
-                appendMessage('bot', data.resposta);
-                atualizarArquivos();
-            } catch(e) { appendMessage('system', 'Falha ao processar mensagem.'); }
+            const res = await fetch('/chat', { method:'POST', body: JSON.stringify({mensagem: msg}), headers:{'Content-Type':'application/json'} });
+            const data = await res.json();
+            appendMessage('bot', data.resposta);
         }
 
         async function uploadArq() {
-            const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
-            if(!file) return;
-
-            appendMessage('system', `Enviando arquivo: ${file.name}...`);
+            const file = document.getElementById('fileInput').files[0];
             const formData = new FormData();
             formData.append('file', file);
-
-            try {
-                const res = await fetch('/upload', { method: 'POST', body: formData });
-                const data = await res.json();
-                if(data.success) {
-                    appendMessage('system', `Arquivo ${file.name} salvo com sucesso!`);
-                    atualizarArquivos();
-                }
-            } catch(e) { appendMessage('system', 'Erro ao enviar arquivo.'); }
-            fileInput.value = ''; 
+            await fetch('/upload', { method: 'POST', body: formData });
+            appendMessage('system', 'Arquivo enviado!');
+            atualizarArquivos();
         }
 
         async function atualizarArquivos() {
-            try {
-                const res = await fetch('/arquivos');
-                const data = await res.json();
-                const container = document.getElementById('fileList');
-                if(data.arquivos && data.arquivos.length > 0) {
-                    container.style.display = 'flex';
-                    container.innerHTML = '<b>Arquivos na pasta do Bot:</b>';
-                    data.arquivos.forEach(arq => {
-                        container.innerHTML += `
-                            <div class="file-item">
-                                <span>📄 ${arq}</span>
-                                <a href="/baixar/${arq}" target="_blank">Baixar</a>
-                            </div>`;
-                    });
-                } else {
-                    container.style.display = 'none';
-                }
-            } catch(e) {}
+            const res = await fetch('/arquivos');
+            const data = await res.json();
+            const list = document.getElementById('fileList');
+            list.innerHTML = '<b>Arquivos:</b>';
+            data.arquivos.forEach(arq => {
+                list.innerHTML += `<div class="file-item">${arq} <a href="/baixar/${arq}">Baixar</a></div>`;
+            });
         }
 
-        function copiarTexto(btn, texto) {
-            navigator.clipboard.writeText(texto);
-            const originalText = btn.innerText;
-            btn.innerText = 'Copiado!';
-            setTimeout(() => btn.innerText = originalText, 2000);
-        }
-
-        /* Mecanismo de Gravação Hold-to-Talk (Pressione para falar) */
-        async function iniciarGravacao() {
-            audioChunks = [];
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    appendMessage('system', 'Processando e enviando áudio...');
-                    
-                    const formData = new FormData();
-                    formData.append('file', audioBlob, `audio_${Date.now()}.wav`);
-                    
-                    const res = await fetch('/upload', { method: 'POST', body: formData });
-                    const data = await res.json();
-                    if(data.success) appendMessage('user', '🎤 Áudio gravado e enviado.');
-                };
-                mediaRecorder.start();
-                micBtn.classList.add('recording');
-            } catch (err) {
-                alert('Permissão de microfone negada ou indisponível.');
-            }
-        }
-
-        function pararGravacao() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-                micBtn.classList.remove('recording');
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            }
-        }
-
-        // Suporte para Mouse e Touchscreen (Celular)
-        micBtn.addEventListener('mousedown', iniciarGravacao);
-        micBtn.addEventListener('mouseup', pararGravacao);
-        micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); iniciarGravacao(); });
-        micBtn.addEventListener('touchend', (e) => { e.preventDefault(); pararGravacao(); });
+        // Gravação simplificada
+        let mediaRecorder, audioChunks = [];
+        micBtn.onmousedown = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const formData = new FormData();
+                formData.append('file', new Blob(audioChunks), 'audio.wav');
+                await fetch('/upload', { method:'POST', body: formData });
+                appendMessage('user', '🎤 Áudio enviado.');
+            };
+            mediaRecorder.start(); micBtn.classList.add('recording');
+        };
+        micBtn.onmouseup = () => { mediaRecorder.stop(); micBtn.classList.remove('recording'); };
     </script>
 </body>
 </html>
