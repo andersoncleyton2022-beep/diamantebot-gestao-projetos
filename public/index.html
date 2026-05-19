@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiamanteBot - Configuração</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>DIAMANTE BOT</h2>
+        <p style="color: #888;">Deploy & Inicialização de Motor</p>
+        
+        <div class="diamond-container">
+            <div class="diamond"></div>
+        </div>
+
+        <input type="file" id="fileInput" style="display: none;">
+        <button type="button" onclick="document.getElementById('fileInput').click()">Upload de Arquivo</button>
+        
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p id="uploadStatus" style="font-size: 14px; margin-top: 5px;"></p>
+
+        <button id="startBtn" disabled>Iniciar Motor</button>
+        <button onclick="window.location.href='/chat.html'" style="border-color: #fff; color: #fff; margin-top: 10px;">Ir para o Chat</button>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const startBtn = document.getElementById('startBtn');
+
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+            uploadStatus.innerText = 'Enviando...';
+            uploadStatus.style.color = '#fff';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/upload', true);
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = (e.loaded / e.total) * 100;
+                        progressFill.style.width = percent + '%';
+                    }
+                };
+
+                xhr.onload = function() {
+                    const res = JSON.parse(xhr.responseText);
+                    if (xhr.status === 200 && res.success) {
+                        uploadStatus.innerText = 'Sucesso: Motor Pronto!';
+                        uploadStatus.style.color = '#2ecc71';
+                        startBtn.disabled = false;
+                    } else {
+                        throw new Error(res.message || 'Erro no upload.');
+                    }
+                };
+
+                xhr.onerror = () => { throw new Error('Erro de conexão.'); };
+                xhr.send(formData);
+
+            } catch (err) {
+                uploadStatus.innerText = err.message;
+                uploadStatus.style.color = '#e74c3c';
+            }
+        });
+
+        startBtn.addEventListener('click', async () => {
+            const response = await fetch('/api/engine/start', { method: 'POST' });
+            const data = await response.json();
+            if(data.success) {
+                alert(data.message);
+                window.location.href = '/chat.html';
+            }
+        });
+    </script>
+</body>
+</html>
