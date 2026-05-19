@@ -1,19 +1,18 @@
 {
-  "name": "diamantebot-gestao-projetos",
-  "version": "2.0.0",
-  "description": "Dashboard para Gestão e Execução Dinâmica de Bots IABB",
-  "main": "server.js",
+  "name": "diamantebot-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard Premium para o DiamanteBot",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
-    "unzipper": "^0.12.3"
+    "cors": "^2.8.5",
+    "adm-zip": "^0.5.10"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "author": "",
-  "license": "ISC"
+  }
 }
