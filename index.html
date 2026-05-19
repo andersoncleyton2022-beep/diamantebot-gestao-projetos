@@ -3,123 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DiamanteBot Pro</title>
+    <title>DiamanteBot Dashboard</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background-color: #f4f6f9; height: 100vh; display: flex; flex-direction: column; }
-        .header { background: #007bff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .control-panel { padding: 10px; background: #fff; border-bottom: 1px solid #ddd; display: flex; gap: 5px; }
-        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        .btn-primary { background: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; }
-        .btn-play { background: #28a745; color: white; padding: 10px; width: 100%; border: none; border-radius: 5px; margin-top: 5px; font-weight: bold; }
-        .chat-container { flex: 1; padding: 15px; overflow-y: auto; background: #efeae2; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 85%; padding: 10px; border-radius: 10px; font-size: 14px; word-wrap: break-word; }
-        .msg.user { background: #d9fdd3; align-self: flex-end; }
-        .msg.bot { background: #ffffff; align-self: flex-start; }
-        .msg.system { background: #fff3cd; align-self: center; font-size: 12px; }
-        .msg-actions { margin-top: 5px; display: flex; gap: 10px; }
-        .btn-action { background: #eee; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
-        .file-list { padding: 10px; background: #fff; border-top: 1px solid #ddd; }
-        .file-item { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #eee; font-size: 13px; }
-        .footer { padding: 10px; background: white; display: flex; align-items: center; gap: 5px; }
-        .btn-icon { background: #f0f2f5; border: none; padding: 10px; border-radius: 50%; font-size: 18px; }
-        #micBtn.recording { background: #dc3545; color: white; animation: pulse 1.2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #f4f6f9; height: 100vh; display: flex; flex-direction: column; color: #333; }
+        .header { background: #007bff; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .control-panel { padding: 15px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+        button { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; padding: 12px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-play { background: #28a745; color: white; width: 100%; font-size: 16px; }
+        .chat-container { flex: 1; padding: 15px; overflow-y: auto; background: #efeae2; }
+        .footer { padding: 12px; background: white; display: flex; align-items: center; gap: 8px; border-top: 1px solid #e0e0e0; }
+        .btn-icon { background: #f0f2f5; padding: 10px; border-radius: 50%; width: 45px; height: 45px; }
     </style>
 </head>
 <body>
-    <div class="header"><span>💎 <b>DiamanteBot Pro</b></span><span id="statusText">🔴</span></div>
+    <div class="header"><span>💎 <b>DiamanteBot Dashboard</b></span></div>
     
     <div class="control-panel">
-        <input type="text" id="dirInput" placeholder="Caminho raiz...">
-        <button class="btn-primary" onclick="configurar()">OK</button>
+        <div style="display: flex; gap: 8px;">
+            <input type="text" id="dirInput" placeholder="Nome do Projeto">
+            <button class="btn-primary" onclick="selecionarProjeto()">OK</button>
+        </div>
+        <button class="btn-play" onclick="iniciarMotor()">▶️ INICIAR MOTOR</button>
     </div>
-    <button class="btn-play" onclick="iniciar()">▶️ INICIAR MOTOR</button>
 
     <div class="chat-container" id="chatContainer">
-        <div class="msg system">Sistema pronto. Configure o caminho para começar.</div>
+        <div class="msg system">Painel pronto. Selecione o projeto e inicie.</div>
     </div>
-    
-    <div class="file-list" id="fileList"></div>
 
     <div class="footer">
-        <input type="file" id="fileInput" style="display:none" onchange="uploadArq()">
+        <input type="file" id="fileInput" style="display:none" onchange="uploadProjeto()">
         <button class="btn-icon" onclick="document.getElementById('fileInput').click()">📎</button>
-        <button class="btn-icon" id="micBtn">🎤</button>
-        <input type="text" id="chatInput" placeholder="Mensagem..." onkeypress="if(event.key==='Enter') enviar()">
-        <button class="btn-icon" onclick="enviar()" style="background: #007bff; color: white;">➤</button>
+        <input type="text" id="chatInput" placeholder="Mensagem...">
+        <button class="btn-icon" onclick="enviarMensagem()" style="background: #007bff; color: white;">➤</button>
     </div>
 
     <script>
-        const chatContainer = document.getElementById('chatContainer');
-        const micBtn = document.getElementById('micBtn');
-
-        function appendMessage(sender, text) {
-            const div = document.createElement('div');
-            div.className = `msg ${sender}`;
-            div.innerText = text;
-            if(sender === 'bot') {
-                div.innerHTML += `<div class="msg-actions"><button class="btn-action" onclick="navigator.clipboard.writeText(\`${text}\`)">Copiar</button></div>`;
-            }
-            chatContainer.appendChild(div);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        async function configurar() {
-            const path = document.getElementById('dirInput').value;
-            const res = await fetch('/configurar', { method:'POST', body: JSON.stringify({caminho: path}), headers:{'Content-Type':'application/json'} });
+        // Funções que conversam diretamente com o seu app.js
+        async function selecionarProjeto() {
+            const nome = document.getElementById('dirInput').value;
+            const res = await fetch('/selecionar-projeto', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nome }) 
+            });
             const data = await res.json();
-            if(data.success) { 
-                document.getElementById('statusText').innerText = '🟢';
-                appendMessage('system', 'Pasta configurada.');
-            }
+            alert(data.msg);
         }
 
-        async function enviar() {
-            const input = document.getElementById('chatInput');
-            const msg = input.value;
-            if(!msg) return;
-            appendMessage('user', msg);
-            input.value = '';
-            const res = await fetch('/chat', { method:'POST', body: JSON.stringify({mensagem: msg}), headers:{'Content-Type':'application/json'} });
+        async function iniciarMotor() {
+            const res = await fetch('/iniciar-motor', { method: 'POST' });
             const data = await res.json();
-            appendMessage('bot', data.resposta);
+            alert(data.msg);
         }
 
-        async function uploadArq() {
+        async function uploadProjeto() {
             const file = document.getElementById('fileInput').files[0];
             const formData = new FormData();
-            formData.append('file', file);
-            await fetch('/upload', { method: 'POST', body: formData });
-            appendMessage('system', 'Arquivo enviado!');
-            atualizarArquivos();
-        }
-
-        async function atualizarArquivos() {
-            const res = await fetch('/arquivos');
+            formData.append('arquivoZip', file);
+            const res = await fetch('/upload-projeto', { method: 'POST', body: formData });
             const data = await res.json();
-            const list = document.getElementById('fileList');
-            list.innerHTML = '<b>Arquivos:</b>';
-            data.arquivos.forEach(arq => {
-                list.innerHTML += `<div class="file-item">${arq} <a href="/baixar/${arq}">Baixar</a></div>`;
-            });
+            alert(data.msg);
         }
-
-        // Gravação simplificada
-        let mediaRecorder, audioChunks = [];
-        micBtn.onmousedown = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = async () => {
-                const formData = new FormData();
-                formData.append('file', new Blob(audioChunks), 'audio.wav');
-                await fetch('/upload', { method:'POST', body: formData });
-                appendMessage('user', '🎤 Áudio enviado.');
-            };
-            mediaRecorder.start(); micBtn.classList.add('recording');
-        };
-        micBtn.onmouseup = () => { mediaRecorder.stop(); micBtn.classList.remove('recording'); };
     </script>
 </body>
 </html>
