@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiamanteBot - Painel Interativo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container" id="chatContainer" style="width: 600px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div style="display: flex; align-items: center;">
+                <img id="botAvatar" src="https://placehold.co" style="border-radius: 50%; margin-right: 10px; width: 40px; height: 40px; border: 1px solid #66fcf1;">
+                <h3 style="margin: 0;">DiamanteBot Chat</h3>
+            </div>
+            <div>
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText" style="font-size: 14px;">Verificando...</span>
+            </div>
+        </div>
+
+        <div class="chat-box" id="chatBox"></div>
+
+        <div class="chat-input-area">
+            <input type="text" id="msgInput" placeholder="Digite uma mensagem...">
+            <input type="file" id="mediaInput" accept="image/*,video/*,audio/*,application/*" style="display: none;">
+            <button onclick="document.getElementById('mediaInput').click()" style="width: auto; margin: 0; padding: 10px;">📎</button>
+            <button id="sendBtn" style="width: auto; margin: 0; padding: 10px 20px;">Enviar</button>
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; display: flex; gap: 10px; font-size: 12px;">
+            <label style="cursor:pointer; color: var(--accent-color)">🖼️ Wallpaper
+                <input type="file" id="bgInput" accept="image/*" style="display:none;" onchange="changeBg(this)">
+            </label>
+            <label style="cursor:pointer; color: var(--accent-color)">👤 Foto Bot
+                <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="changeAvatar(this)">
+            </label>
+            <span style="cursor:pointer; color: #fff; margin-left: auto;" onclick="downloadLogs()">📥 Baixar Logs</span>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const msgInput = document.getElementById('msgInput');
+        const mediaInput = document.getElementById('mediaInput');
+        const sendBtn = document.getElementById('sendBtn');
+        let history = [];
+
+        async function checkStatus() {
+            const res = await fetch('/api/engine/status');
+            const data = await res.json();
+            if(data.status === 'online') {
+                document.getElementById('statusDot').classList.add('status-online');
+                document.getElementById('statusText').innerText = 'Online';
+            } else {
+                document.getElementById('statusText').innerText = 'Offline';
+            }
+        }
+
+        async function appendMessage(sender, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.style.margin = '5px 0';
+            msgDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            history.push({ sender, text, time: new Date() });
+        }
+
+        async function sendMessage() {
+            const text = msgInput.value;
+            const file = mediaInput.files[0];
+            if (!text && !file) return;
+
+            const formData = new FormData();
+            if (text) formData.append('message', text);
+            if (file) formData.append('media', file);
+
+            appendMessage('Você', text || `[Arquivo: ${file.name}]`);
+            msgInput.value = '';
+            mediaInput.value = '';
+
+            try {
+                const response = await fetch('/api/chat', { method: 'POST', body: formData });
+                const data = await response.json();
+                appendMessage('DiamanteBot', data.text);
+            } catch (e) {
+                appendMessage('Sistema', 'Erro ao enviar mensagem.');
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        msgInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
+
+        function changeBg(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => document.getElementById('chatBox').style.backgroundImage = `url(${e.target.result})`;
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function changeAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => document.getElementById('botAvatar').src = e.target.result;
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function downloadLogs() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(history, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "diamantebot_logs.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        checkStatus();
+    </script>
+</body>
+</html>
