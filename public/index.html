@@ -11,11 +11,12 @@
         <h2>DIAMANTE BOT</h2>
         <p style="color: #888;">Deploy & Inicialização de Motor</p>
         
+        <!-- Elemento Novo: Diamante Premium 3D com Linhas Brancas/Azuis -->
         <div class="diamond-container">
             <div class="diamond"></div>
         </div>
 
-        <!-- Mecanismo de Upload do ZIP Local -->
+        <!-- Mecanismo de Upload do ZIP Local (Caso queira subir arquivos do celular) -->
         <input type="file" id="fileInput" accept=".zip" style="display: none;">
         <button type="button" onclick="document.getElementById('fileInput').click()">Upload de Arquivo .ZIP</button>
         
@@ -24,17 +25,17 @@
         </div>
         <p id="uploadStatus" style="font-size: 14px; margin-top: 5px;"></p>
 
-        <!-- Mecanismo de Integração com a IA Bebê Nuvem -->
-        <div style="margin-top: 20px; padding: 15px; border: 1px dashed var(--accent-color); border-radius: 8px; background: rgba(0,0,0,0.2);">
-            <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--accent-color);">🔗 Conectar IA da Nuvem (Render)</p>
-            <input type="text" id="iaUrlInput" placeholder="Ex: https://onrender.com" style="width: 90%; padding: 10px; background: #111; border: 1px solid #333; color: #fff; border-radius: 6px;">
-            <button id="connectIaBtn" style="margin-top: 10px; background: var(--accent-color); color: #000;">Iniciar IA Bebê Nuvem</button>
-            <p id="iaStatusText" style="font-size: 12px; margin-top: 5px; color: #888;"></p>
+        <!-- Mecanismo de Integração com a sua IA Bebê na Nuvem (Render) -->
+        <div style="margin-top: 20px; padding: 15px; border: 1px dashed var(--accent-color); border-radius: 12px; background: rgba(0,0,0,0.3);">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--accent-color); font-weight: bold;">🔗 Conectar IA da Nuvem (Render)</p>
+            <input type="text" id="iaUrlInput" placeholder="Ex: https://onrender.com" style="width: 100%; padding: 12px; background: #090d14; border: 1px solid #232d3f; color: #fff; border-radius: 8px; box-sizing: border-box; outline: none; font-size: 14px;">
+            <button id="connectIaBtn" style="margin-top: 12px; background: var(--accent-color); color: #000; border: none;">Iniciar IA Bebê Nuvem</button>
+            <p id="iaStatusText" style="font-size: 12px; margin-top: 8px; color: #888; font-weight: 500;"></p>
         </div>
 
-        <!-- Disparador do Motor Geral -->
-        <button id="startBtn" disabled style="margin-top: 20px;">Iniciar Motor Principal</button>
-        <button onclick="window.location.href='/chat.html'" style="border-color: #fff; color: #fff; margin-top: 10px;">Ir para o Chat</button>
+        <!-- Disparador do Motor Principal (Habilita após sucesso do ZIP ou da IA Bebê) -->
+        <button id="startBtn" disabled style="margin-top: 25px;">Iniciar Motor Principal</button>
+        <button onclick="window.location.href='/chat.html'" style="border-color: #ffffff; color: #ffffff; margin-top: 12px;">Ir para o Chat</button>
     </div>
 
     <script>
@@ -48,13 +49,16 @@
         const connectIaBtn = document.getElementById('connectIaBtn');
         const iaStatusText = document.getElementById('iaStatusText');
 
+        // Link padrão da sua IA Bebê pré-configurado
         iaUrlInput.value = "https://onrender.com";
 
+        // AÇÃO: Conectar com o link da IA Bebê na Nuvem
         connectIaBtn.addEventListener('click', async () => {
             const url = iaUrlInput.value.trim();
-            if(!url) return alert('Insira o link do seu Render.');
-            iaStatusText.innerText = "Conectando e acordando a IA Bebê...";
-            iaStatusText.style.color = "#fff";
+            if(!url) return alert('Por favor, insira o link da sua IA.');
+            
+            iaStatusText.innerText = "Conectando e acordando a IA Bebê na nuvem...";
+            iaStatusText.style.color = "#ffffff";
 
             try {
                 const response = await fetch('/api/ia/conectar', {
@@ -63,52 +67,76 @@
                     body: JSON.stringify({ url: url })
                 });
                 const data = await response.json();
+                
                 if(data.success) {
                     iaStatusText.innerText = "IA Bebê Conectada com Sucesso!";
-                    iaStatusText.style.color = "#2ecc71";
-                    startBtn.disabled = false;
+                    iaStatusText.style.color = "var(--success)";
+                    startBtn.disabled = false; // Libera o botão principal
+                } else {
+                    iaStatusText.innerText = "Erro ao vincular: " + data.message;
+                    iaStatusText.style.color = "var(--danger)";
                 }
             } catch (err) {
-                iaStatusText.innerText = "Erro ao conectar.";
-                iaStatusText.style.color = "#e74c3c";
+                iaStatusText.innerText = "Erro de rede ao conectar com a IA Bebê.";
+                iaStatusText.style.color = "var(--danger)";
             }
         });
 
+        // AÇÃO: Upload de arquivo ZIP do motor local com barra de progresso visual
         fileInput.addEventListener('change', async () => {
             const file = fileInput.files[0];
             if (!file) return;
 
             progressBar.style.display = 'block';
             progressFill.style.width = '0%';
-            uploadStatus.innerText = 'Enviando ZIP...';
+            uploadStatus.innerText = 'Enviando pacote ZIP...';
+            uploadStatus.style.color = '#ffffff';
 
             const formData = new FormData();
             formData.append('file', file);
 
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/api/upload', true);
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    progressFill.style.width = (e.loaded / e.total) * 100 + '%';
-                }
-            };
-            xhr.onload = function() {
-                const res = JSON.parse(xhr.responseText);
-                if (xhr.status === 200 && res.success) {
-                    uploadStatus.innerText = 'Sucesso: ZIP Pronto!';
-                    uploadStatus.style.color = '#2ecc71';
-                    startBtn.disabled = false;
-                }
-            };
-            xhr.send(formData);
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/upload', true);
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = (e.loaded / e.total) * 100;
+                        progressFill.style.width = percent + '%';
+                    }
+                };
+
+                xhr.onload = function() {
+                    const res = JSON.parse(xhr.responseText);
+                    if (xhr.status === 200 && res.success) {
+                        uploadStatus.innerText = 'Sucesso: Pacote ZIP Pronto!';
+                        uploadStatus.style.color = 'var(--success)';
+                        startBtn.disabled = false; // Libera o botão principal
+                    } else {
+                        throw new Error(res.message || 'Erro no processamento.');
+                    }
+                };
+
+                xhr.onerror = () => { throw new Error('Erro na transmissão do arquivo.'); };
+                xhr.send(formData);
+
+            } catch (err) {
+                uploadStatus.innerText = err.message;
+                uploadStatus.style.color = 'var(--danger)';
+            }
         });
 
+        // AÇÃO: Clicar no botão "Iniciar Motor Principal"
         startBtn.addEventListener('click', async () => {
-            const response = await fetch('/api/engine/start', { method: 'POST' });
-            const data = await response.json();
-            if(data.success) {
-                alert(data.message);
-                window.location.href = '/chat.html';
+            try {
+                const response = await fetch('/api/engine/start', { method: 'POST' });
+                const data = await response.json();
+                if(data.success) {
+                    alert(data.message);
+                    window.location.href = '/chat.html'; // Redireciona para o painel interativo
+                }
+            } catch (e) {
+                alert('Erro ao disparar sinal do motor.');
             }
         });
     </script>
