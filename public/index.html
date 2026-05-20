@@ -11,12 +11,10 @@
         <h2>DIAMANTE BOT</h2>
         <p style="color: #888;">Deploy & Inicialização de Motor</p>
         
-        <!-- Elemento Novo: Diamante Premium 3D com Linhas Brancas/Azuis -->
         <div class="diamond-container">
             <div class="diamond"></div>
         </div>
 
-        <!-- Mecanismo de Upload do ZIP Local (Caso queira subir arquivos do celular) -->
         <input type="file" id="fileInput" accept=".zip" style="display: none;">
         <button type="button" onclick="document.getElementById('fileInput').click()">Upload de Arquivo .ZIP</button>
         
@@ -25,17 +23,17 @@
         </div>
         <p id="uploadStatus" style="font-size: 14px; margin-top: 5px;"></p>
 
-        <!-- Mecanismo de Integração com a sua IA Bebê na Nuvem (Render) -->
-        <div style="margin-top: 20px; padding: 15px; border: 1px dashed var(--accent-color); border-radius: 12px; background: rgba(0,0,0,0.3);">
-            <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--accent-color); font-weight: bold;">🔗 Conectar IA da Nuvem (Render)</p>
-            <input type="text" id="iaUrlInput" placeholder="Ex: https://onrender.com" style="width: 100%; padding: 12px; background: #090d14; border: 1px solid #232d3f; color: #fff; border-radius: 8px; box-sizing: border-box; outline: none; font-size: 14px;">
-            <button id="connectIaBtn" style="margin-top: 12px; background: var(--accent-color); color: #000; border: none;">Iniciar IA Bebê Nuvem</button>
-            <p id="iaStatusText" style="font-size: 12px; margin-top: 8px; color: #888; font-weight: 500;"></p>
+        <!-- Conexão por Link com Handshake Real -->
+        <div style="margin-top: 20px; padding: 15px; border: 1px dashed var(--accent-color); border-radius: 8px; background: rgba(0,0,0,0.2);">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--accent-color);">🔗 Conectar IA da Nuvem (Render)</p>
+            <input type="text" id="iaUrlInput" placeholder="Ex: https://onrender.com" style="width: 90%; padding: 10px; background: #090d14; border: 1px solid #232d3f; color: #fff; border-radius: 6px;">
+            <!-- TRAVA VISUAL DE CLIQUES DUPLOS IMPLEMENTADA -->
+            <button id="connectIaBtn" style="margin-top: 10px; background: var(--accent-color); color: #000;">Chamar Morador IA para a Casa</button>
+            <p id="iaStatusText" style="font-size: 12px; margin-top: 5px; color: #888;"></p>
         </div>
 
-        <!-- Disparador do Motor Principal (Habilita após sucesso do ZIP ou da IA Bebê) -->
-        <button id="startBtn" disabled style="margin-top: 25px;">Iniciar Motor Principal</button>
-        <button onclick="window.location.href='/chat.html'" style="border-color: #ffffff; color: #ffffff; margin-top: 12px;">Ir para o Chat</button>
+        <button id="startBtn" disabled style="margin-top: 20px;">Iniciar Motor Principal</button>
+        <button onclick="window.location.href='/chat.html'" style="border-color: #fff; color: #fff; margin-top: 10px;">Ir para o Chat da Casa</button>
     </div>
 
     <script>
@@ -44,99 +42,90 @@
         const progressFill = document.getElementById('progressFill');
         const uploadStatus = document.getElementById('uploadStatus');
         const startBtn = document.getElementById('startBtn');
-        
         const iaUrlInput = document.getElementById('iaUrlInput');
         const connectIaBtn = document.getElementById('connectIaBtn');
         const iaStatusText = document.getElementById('iaStatusText');
 
-        // Link padrão da sua IA Bebê pré-configurado
         iaUrlInput.value = "https://onrender.com";
 
-        // AÇÃO: Conectar com o link da IA Bebê na Nuvem
         connectIaBtn.addEventListener('click', async () => {
             const url = iaUrlInput.value.trim();
-            if(!url) return alert('Por favor, insira o link da sua IA.');
+            if(!url) return alert('Insira o link.');
             
-            iaStatusText.innerText = "Conectando e acordando a IA Bebê na nuvem...";
-            iaStatusText.style.color = "#ffffff";
+            // TRAVA O BOTÃO PARA EVITAR CLIQUES DUPLOS
+            connectIaBtn.disabled = true;
+            connectIaBtn.innerText = "Processando validação...";
+            iaStatusText.innerText = "Realizando Handshake e acordando o servidor...";
+            iaStatusText.style.color = "#fff";
 
             try {
-                const response = await fetch('/api/ia/conectar', {
+                // Faz a validação de handshake física real no backend antes de conectar
+                const handshake = await fetch('/api/ia/handshake', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: url })
                 });
-                const data = await response.json();
-                
-                if(data.success) {
-                    iaStatusText.innerText = "IA Bebê Conectada com Sucesso!";
-                    iaStatusText.style.color = "var(--success)";
-                    startBtn.disabled = false; // Libera o botão principal
+                const resHandshake = await handshake.json();
+
+                if (resHandshake.success) {
+                    const response = await fetch('/api/ia/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: url })
+                    });
+                    const data = await response.json();
+                    if(data.success) {
+                        iaStatusText.innerText = "Handshake concluído! Morador IA ativo.";
+                        iaStatusText.style.color = "#00e676";
+                        startBtn.disabled = false;
+                    }
                 } else {
-                    iaStatusText.innerText = "Erro ao vincular: " + data.message;
-                    iaStatusText.style.color = "var(--danger)";
+                    iaStatusText.innerText = `Aviso: Servidor em modo sono ou rota incorreta.`;
+                    iaStatusText.style.color = "#ff1744";
+                    startBtn.disabled = false; // Permite forçar o início mesmo se estiver em modo sono profundo
                 }
             } catch (err) {
-                iaStatusText.innerText = "Erro de rede ao conectar com a IA Bebê.";
-                iaStatusText.style.color = "var(--danger)";
+                iaStatusText.innerText = "Erro físico de rede ao validar.";
+                iaStatusText.style.color = "#ff1744";
+            } finally {
+                // LIBERA O BOTÃO APÓS O PROCESSAMENTO COMPLETO
+                connectIaBtn.disabled = false;
+                connectIaBtn.innerText = "Chamar Morador IA para a Casa";
             }
         });
 
-        // AÇÃO: Upload de arquivo ZIP do motor local com barra de progresso visual
         fileInput.addEventListener('change', async () => {
             const file = fileInput.files[0];
             if (!file) return;
-
             progressBar.style.display = 'block';
             progressFill.style.width = '0%';
-            uploadStatus.innerText = 'Enviando pacote ZIP...';
-            uploadStatus.style.color = '#ffffff';
+            uploadStatus.innerText = 'Enviando ZIP...';
 
             const formData = new FormData();
             formData.append('file', file);
 
-            try {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', '/api/upload', true);
-
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = (e.loaded / e.total) * 100;
-                        progressFill.style.width = percent + '%';
-                    }
-                };
-
-                xhr.onload = function() {
-                    const res = JSON.parse(xhr.responseText);
-                    if (xhr.status === 200 && res.success) {
-                        uploadStatus.innerText = 'Sucesso: Pacote ZIP Pronto!';
-                        uploadStatus.style.color = 'var(--success)';
-                        startBtn.disabled = false; // Libera o botão principal
-                    } else {
-                        throw new Error(res.message || 'Erro no processamento.');
-                    }
-                };
-
-                xhr.onerror = () => { throw new Error('Erro na transmissão do arquivo.'); };
-                xhr.send(formData);
-
-            } catch (err) {
-                uploadStatus.innerText = err.message;
-                uploadStatus.style.color = 'var(--danger)';
-            }
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload', true);
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) progressFill.style.width = (e.loaded / e.total) * 100 + '%';
+            };
+            xhr.onload = function() {
+                const res = JSON.parse(xhr.responseText);
+                if (xhr.status === 200 && res.success) {
+                    uploadStatus.innerText = 'Sucesso: ZIP Carregado!';
+                    uploadStatus.style.color = '#00e676';
+                    startBtn.disabled = false;
+                }
+            };
+            xhr.send(formData);
         });
 
-        // AÇÃO: Clicar no botão "Iniciar Motor Principal"
         startBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/engine/start', { method: 'POST' });
-                const data = await response.json();
-                if(data.success) {
-                    alert(data.message);
-                    window.location.href = '/chat.html'; // Redireciona para o painel interativo
-                }
-            } catch (e) {
-                alert('Erro ao disparar sinal do motor.');
+            const response = await fetch('/api/engine/start', { method: 'POST' });
+            const data = await response.json();
+            if(data.success) {
+                alert(data.message);
+                window.location.href = '/chat.html';
             }
         });
     </script>
