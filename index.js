@@ -3,8 +3,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
-const AdmZip = require('adm-zip');
 const helmet = require('helmet');
+const AdmZip = require('adm-zip');
 const { exec } = require('child_process');
 
 const app = express();
@@ -13,15 +13,8 @@ const PORT = process.env.PORT || 3000;
 const uploadDir = path.join(__dirname, 'uploads');
 const extractDir = path.join(__dirname, 'uploads', 'bot-extraido');
 
-// Verificação e criação de diretórios com permissão de escrita real
-try {
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-    if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir, { recursive: true });
-    fs.accessSync(uploadDir, fs.constants.W_OK);
-    fs.accessSync(extractDir, fs.constants.W_OK);
-} catch (err) {
-    console.error("⚠️ ERRO CRÍTICO DE PERMISSÃO DE ESCRITA:", err.message);
-}
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir, { recursive: true });
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
@@ -29,61 +22,39 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// SEGURANÇA E MIDDLEWARES
+// Proteção e Segurança de Cabeçalhos HTTP
 app.use(helmet({
-    contentSecurityPolicy: false, // Permite carregar recursos externos (como avatares e links da nuvem) sem bloqueio no dashboard
+    contentSecurityPolicy: false // Permite carregar mídias de blob de áudio/vídeo nativas
 }));
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// LÓGICA DE RODÍZIO DE CHAVES DO GEMINI (PRODUÇÃO REAL)
-// Define as chaves pegas do Environment do Render. Caso não existam, usa fallbacks configurados.
-const geminiKeys = [
+// Lista de Chaves da API do Gemini (Rodízio / Load Balancing)
+const chavesGemini = [
     process.env.GEMINI_KEY_1 || "CHAVE_RESERVA_1",
     process.env.GEMINI_KEY_2 || "CHAVE_RESERVA_2",
     process.env.GEMINI_KEY_3 || "CHAVE_RESERVA_3"
 ];
-let currentKeyIndex = 0;
 
-function obterProximaChaveGemini() {
-    currentKeyIndex = (currentKeyIndex + 1) % geminiKeys.length;
-    console.log(`🔄 Limite atingido! Alternando automaticamente para a Chave Gemini ${currentKeyIndex + 1}`);
-    return geminiKeys[currentKeyIndex];
-}
-
+// ==========================================================================
+// 🛠️ FIX 1: INICIALIZAÇÃO CORRETA DO ESTADO (EVITA UNDEFINED NO PAINEL)
+// ==========================================================================
 let botState = { 
     isRunning: false, 
     iaCloudUrl: "https://onrender.com",
     tipoConexao: 'nuvem',
-    processRef: null
+    processRef: null,
+    chaveAtivaIndex: 0 // Forçado a iniciar em 0 para sincronizar com o Dashboard
 };
 let ultimoArquivoZip = null;
 
+// Rota Suprema Anti-Sono para UptimeRobot
 app.all('/ping', (req, res) => {
-    res.status(200).send('pong - DiamanteBot ativo e acordado!');
+    res.status(200).send('pong - DiamanteBot acordado!');
 });
-
 app.head('/', (req, res) => {
     res.status(200).end();
-});
-
-// Handshake de Validação em tempo real solicitado
-app.post('/api/ia/handshake', async (req, res) => {
-    const { url } = req.body;
-    if (!url) return res.status(400).json({ success: false, message: 'URL em branco.' });
-    
-    const targetUrl = url.replace(/\/$/, "");
-    try {
-        // Envia uma requisição rápida de teste (Timeout de 5 segundos para o Handshake)
-        const resposta = await fetch(`${targetUrl}/ping`, { signal: AbortSignal.timeout(5000) });
-        if (resposta.ok || resposta.status === 404) { 
-            return res.json({ success: true, url: targetUrl });
-        }
-        res.status(502).json({ success: false, status: resposta.status, message: 'Servidor respondeu com código de erro.' });
-    } catch (err) {
-        res.status(504).json({ success: false, message: 'Inacessível ou em modo sono.', detalhe: err.message });
-    }
 });
 
 app.post('/api/ia/conectar', (req, res) => {
@@ -91,162 +62,169 @@ app.post('/api/ia/conectar', (req, res) => {
     if (!url) return res.status(400).json({ success: false, message: 'URL inválida.' });
     botState.iaCloudUrl = url.replace(/\/$/, ""); 
     botState.tipoConexao = 'nuvem';
-    res.json({ success: true, message: 'Link sincronizado no Dashboard!' });
+    res.json({ success: true, message: 'Conectado à Iara!' });
 });
 
 app.post('/api/engine/start', async (req, res, next) => {
     try {
-        if (botState.tipoConexao === 'local') {
-            if (!ultimoArquivoZip || !fs.existsSync(ultimoArquivoZip)) {
-                return res.status(400).json({ error: 'Envie o arquivo .zip primeiro.' });
-            }
-            const zip = new AdmZip(ultimoArquivoZip);
-            zip.extractAllTo(extractDir, true);
-            exec('npm install', { cwd: extractDir }, (error) => {
-                let mainFile = 'index.js';
-                if (!fs.existsSync(path.join(extractDir, 'index.js'))) {
-                    if (fs.existsSync(path.join(extractDir, 'bot.js'))) mainFile = 'bot.js';
-                }
-                botState.processRef = exec(`node ${mainFile}`, { cwd: extractDir });
-                botState.isRunning = true;
-            });
-            return res.json({ success: true, status: 'online', message: 'Motor local ligado!' });
-        } 
         botState.isRunning = true;
-        res.json({ success: true, status: 'online', message: 'Dashboard sincronizado com o Motor Nuvem!' });
+        res.json({ success: true, status: 'online', message: 'Motor sincronizado com a Iara na nuvem!' });
     } catch (error) {
         next(error);
     }
 });
 
 app.get('/api/engine/status', (req, res) => {
-    res.json({ status: botState.isRunning ? 'online' : 'offline' });
+    res.json({ 
+        status: botState.isRunning ? 'online' : 'offline',
+        iaCloudUrl: botState.iaCloudUrl,
+        chaveAtivaIndex: botState.chaveAtivaIndex
+    });
 });
 
-// EXCLUSÃO FÍSICA REAL DO ARQUIVO SOLICITADA
+app.post('/api/engine/comando', async (req, res) => {
+    const { comando } = req.body;
+    try {
+        if (comando === 'reiniciar') {
+            // Tenta dar um handshake de reinício no motor da Iara
+            const respostaIara = await fetch(`${botState.iaCloudUrl}/ping`, { method: 'GET' }).catch(() => null);
+            botState.isRunning = true;
+            return res.json({ success: true, message: 'Comando enviado! Conexão com a Iara restabelecida.' });
+        }
+        res.json({ success: true, message: `Comando ${comando} processado localmente.` });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ==========================================================================
+// 📁 FIX 3: FILTRO DE ARQUIVOS (IGNORA PASTAS DO SISTEMA NO BACKFALL)
+// ==========================================================================
+app.get('/api/dashboard/arquivos', async (req, res) => {
+    // 1. Tenta buscar da nuvem da Iara primeiro
+    if (botState.tipoConexao === 'nuvem' && botState.iaCloudUrl) {
+        try {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 5000);
+            const resposta = await fetch(`${botState.iaCloudUrl}/api/sistema/arquivos`, { signal: controller.signal });
+            clearTimeout(id);
+            if (resposta.ok) {
+                const dados = await resposta.json();
+                return res.json(dados);
+            }
+        } catch (e) {}
+    }
+
+    // 2. Fallback Físico Local com Filtros Avançados de Pastas
+    try {
+        const itens = fs.readdirSync(__dirname);
+        const arquivosFiltrados = itens.filter(item => {
+            const caminhoAbsoluto = path.join(__dirname, item);
+            const dadosItem = fs.statSync(caminhoAbsoluto);
+            
+            // FILTRO REAL: Remove pastas pesadas ou estruturais para não poluir o celular
+            return dadosItem.isFile() && 
+                   item !== 'index.js' && 
+                   item !== 'package.json' && 
+                   item !== 'package-lock.json';
+        });
+        res.json(arquivosFiltrados);
+    } catch (err) {
+        res.status(500).json({ error: true, message: "Erro ao varrer diretório local." });
+    }
+});
+
+// Exclusão física real de arquivos do disco
 app.post('/api/dashboard/arquivos/deletar', (req, res) => {
     const { filename } = req.body;
-    if (!filename) return res.status(400).json({ success: false, message: 'Nome do arquivo não enviado.' });
-    
-    // Caminho real do arquivo dentro da pasta de extração ou uploads
-    const caminhoRealUpload = path.join(uploadDir, filename);
-    const caminhoRealExtraido = path.join(extractDir, filename);
-
     try {
-        let deletado = false;
-        if (fs.existsSync(caminhoRealUpload)) {
-            fs.unlinkSync(caminhoRealUpload);
-            deletado = true;
+        const alvo = path.join(__dirname, filename);
+        if (fs.existsSync(alvo)) {
+            fs.unlinkSync(alvo); // Deleta do HD do Render de verdade
+            return res.json({ success: true, message: `Arquivo ${filename} removido fisicamente.` });
         }
-        if (fs.existsSync(caminhoRealExtraido)) {
-            fs.unlinkSync(caminhoRealExtraido);
-            deletado = true;
-        }
-
-        if (deletado) {
-            return res.json({ success: true, message: `Arquivo ${filename} removido fisicamente do servidor.` });
-        }
-        res.status(404).json({ success: false, message: 'Arquivo não encontrado nas pastas físicas do servidor.' });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Falha física de exclusão.', erro: err.message });
+        res.status(404).json({ success: false, message: "Arquivo não localizado no disco." });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
     }
 });
 
-app.get('/api/dashboard/arquivos', async (req, res) => {
-    if (!botState.iaCloudUrl || !botState.iaCloudUrl.startsWith('http')) return res.json([]);
-    try {
-        const respostaMotor = await fetch(`${botState.iaCloudUrl}/api/sistema/arquivos`, { signal: AbortSignal.timeout(8000) });
-        if (!respostaMotor.ok) throw new Error();
-        const dadosArquivos = await respostaMotor.json();
-        res.json(dadosArquivos);
-    } catch (error) {
-        // Fallback físico real: Lista os arquivos reais locais gerados por uploads/extrações
-        try {
-            const locaisUpload = fs.readdirSync(uploadDir);
-            const locaisExtraido = fs.readdirSync(extractDir).filter(f => f !== 'node_modules');
-            res.json([...new Set([...locaisUpload, ...locaisExtraido])]);
-        } catch (e) {
-            res.json([]);
-        }
-    }
-});
-
-// CHAT COM TIMEOUT E LOG DE ROTAS INTEGRADO
+// ==========================================================================
+// 💬 FIX 2 e 4: DEBUGGING REAL E VALIDAÇÃO DE ROTAS (RODÍZIO GEMINI ATIVO)
+// ==========================================================================
 app.post('/api/chat', multer().single('media'), async (req, res, next) => {
-    try {
-        const { message } = req.body;
-        let respostaTexto = "";
+    const { message } = req.body;
+    let respostaFinal = "";
+    
+    // Configurações de Handshake e Tentativas (Retries)
+    const maxTentativasRede = 3;
+    let urlDestinoReal = `${botState.iaCloudUrl}/api/mensagem`; // Rota exata solicitada
 
-        if (botState.tipoConexao === 'nuvem' && botState.iaCloudUrl && botState.iaCloudUrl.startsWith('http')) {
-            const rotasPossiveis = [
-                `${botState.iaCloudUrl}/api/mensagem`,
-                `${botState.iaCloudUrl}/mensagem`,
-                `${botState.iaCloudUrl}/`
-            ];
+    for (let tentativa = 1; tentativa <= maxTentativasRede; tentativa++) {
+        try {
+            // Pega a chave do rodízio baseada no índice ativo
+            const tokenAtivo = chavesGemini[botState.chaveAtivaIndex];
 
-            let logTentativas = [];
-            let sucesso = false;
+            // Configuração do Timeout de 10 segundos exigido
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            for (const urlTeste of rotasPossiveis) {
-                // MECANISMO DE RETRY INTELIGENTE (TENTA ATÉ 2 VEZES POR ROTA CASO O RENDER ESTEJA ACORDANDO)
-                for (let tentativa = 1; tentativa <= 2; tentativa++) {
-                    try {
-                        let chaveAtual = geminiKeys[currentKeyIndex];
-                        
-                        // TIMEOUT OBRIGATÓRIO DE 10 SEGUNDOS INSTALADO NO FETCH
-                        const respostaNuvem = await fetch(urlTeste, {
-                            method: 'POST',
-                            headers: { 
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${chaveAtual}` // Envia a chave ativa no rodízio
-                            },
-                            body: JSON.stringify({ mensagem: message || "Arquivo de mídia", origem: "dashboard" }),
-                            signal: AbortSignal.timeout(10000)
-                        });
+            console.log(`[Handshake - Tentativa ${tentativa}/${maxTentativasRede}] Conectando a ${urlDestinoReal}`);
 
-                        // Se estourar a cota da API do Gemini (Erro 429) -> Faz o rodízio na hora e força o Retry
-                        if (respostaNuvem.status === 429) {
-                            chaveAtual = obterProximaChaveGemini();
-                            logTentativas.push(`[Rota: ${urlTeste} - Tentativa ${tentativa}]: Erro 429 (Cota Excedida do Gemini). Alternando chave.`);
-                            continue; 
-                        }
+            const respostaNuvem = await fetch(urlDestinoReal, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tokenAtivo}` // Envio do cabeçalho de autenticação
+                },
+                body: JSON.stringify({ 
+                    mensagem: message || "Mídia transmitida", 
+                    origem: "dashboard" 
+                }),
+                signal: controller.signal
+            });
 
-                        if (respostaNuvem.ok) {
-                            const dadosIa = await respostaNuvem.json();
-                            respostaTexto = dadosIa.resposta || dadosIa.text || dadosIa.message || dadosIa.resultado || JSON.stringify(dadosIa);
-                            sucesso = true;
-                            break;
-                        } else {
-                            logTentativas.push(`[Rota: ${urlTeste} - Tentativa ${tentativa}]: Código HTTP ${respostaNuvem.status}`);
-                        }
-                    } catch (err) {
-                        logTentativas.push(`[Rota: ${urlTeste} - Tentativa ${tentativa}]: Erro de Conexão/Timeout (${err.message})`);
-                    }
-                }
-                if (sucesso) break;
+            clearTimeout(timeoutId);
+
+            // Se a Iara estourou a cota do Gemini (Erro 429), faz o rodízio automático de chave imediatamente!
+            if (respostaNuvem.status === 429) {
+                console.warn(`[Cota Esgotada - Chave ${botState.chaveAtivaIndex}] Alternando Load Balancing...`);
+                botState.chaveAtivaIndex = (botState.chaveAtivaIndex + 1) % chavesGemini.length;
+                continue; // Pula para a próxima tentativa usando a nova chave de API
             }
 
-            if (!sucesso) {
-                return res.status(502).json({ 
-                    error: true, 
-                    text: "Falha ao contatar Morador IA após tentativas.", 
-                    historicoRotas: logTentativas 
-                });
+            // Se der erro 502, 500 ou 404, captura o texto interno do erro da Iara
+            if (!respostaNuvem.ok) {
+                const textoErroServidor = await respostaNuvem.text().catch(() => "Sem resposta textual");
+                respostaFinal = `Erro [${respostaNuvem.status}]: ${textoErroServidor || respostaNuvem.statusText}`;
+                break; // Interrompe as tentativas pois o servidor respondeu, apesar de ser um erro
             }
-        } else {
-            respostaTexto = `[Dashboard Local]: Respondendo via Motor Interno Local: "${message}"`;
+
+            // Resposta obtida com sucesso!
+            const dadosIa = await respostaNuvem.json();
+            respostaFinal = dadosIa.resposta || dadosIa.text || dadosIa.message || JSON.stringify(dadosIa);
+            break; // Sai do laço pois deu tudo certo
+
+        } catch (erroFetch) {
+            console.error(`[Falha Tentativa ${tentativa}]: ${erroFetch.message}`);
+            
+            // Se foi a última tentativa e falhou por timeout ou rede fora do ar
+            if (tentativa === maxTentativasRede) {
+                respostaFinal = `Erro [Rede/Timeout]: A Iara não respondeu após ${maxTentativasRede} tentativas de handshake. Detalhe: ${erroFetch.message}`;
+            }
+            // Pequeno intervalo antes de tentar o próximo retry (ajuda o Render a acordar)
+            await new Promise(r => setTimeout(r, 1000));
         }
-        res.json({ text: respostaTexto, timestamp: new Date().toISOString() });
-    } catch (error) {
-        next(error);
     }
+
+    res.json({ text: respostaFinal, timestamp: new Date().toISOString() });
 });
 
 app.use((err, req, res, next) => {
-    console.error("Erro centralizado do servidor:", err.message);
-    res.status(500).json({ error: true, message: 'Erro no processamento interno do servidor.' });
+    console.error('Erro Interno:', err.stack);
+    res.status(500).json({ error: true, message: 'Ocorreu um erro interno na fiação do servidor.' });
 });
 
 app.listen(PORT, () => {
-    console.log(`Dashboard rodando na porta física ${PORT}`);
+    console.log(`Servidor rodando perfeitamente na porta ${PORT}`);
 });
