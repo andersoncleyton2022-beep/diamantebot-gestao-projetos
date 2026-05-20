@@ -1,116 +1,174 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DiamanteBot - Configuração</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <h2>DIAMANTE BOT</h2>
-        <p style="color: #888;">Deploy & Inicialização de Motor</p>
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const cors = require('cors');
+const AdmZip = require('adm-zip');
+const { exec } = require('child_process');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+const uploadDir = path.join(__dirname, 'uploads');
+const extractDir = path.join(__dirname, 'uploads', 'bot-extraido');
+
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir, { recursive: true });
+
+// Configuração para o upload do ZIP do motor local
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir),
+    filename: (req, file, cb) => cb(null, 'bot_projeto.zip')
+});
+const upload = multer({ storage: storage });
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Estado Geral Unificado do Sistema
+let botState = { 
+    isRunning: false, 
+    iaCloudUrl: "https://onrender.com",
+    tipoConexao: 'nuvem',
+    processRef: null
+};
+let ultimoArquivoZip = null;
+
+// Endpoint de Upload do ZIP (Configurador)
+app.post('/api/upload', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+    }
+    ultimoArquivoZip = req.file.path;
+    botState.tipoConexao = 'local'; // Muda para local se o usuário optar por subir um ZIP
+    res.status(200).json({ 
+        success: true, 
+        message: 'Arquivo .zip recebido com sucesso no Render!' 
+    });
+});
+
+// Endpoint para vincular o link da IA Bebê na Nuvem
+app.post('/api/ia/conectar', (req, res) => {
+    const { url } = req.body;
+    if (!url) {
+        return res.status(400).json({ success: false, message: 'URL não fornecida.' });
+    }
+    botState.iaCloudUrl = url.replace(/\/$/, ""); 
+    botState.tipoConexao = 'nuvem';
+    res.json({ success: true, message: 'Link da IA Bebê sincronizado!' });
+});
+
+// Endpoint para Ligar o Motor (Suporta tanto o ZIP extraído quanto a IA na Nuvem)
+app.post('/api/engine/start', async (req, res, next) => {
+    try {
+        if (botState.tipoConexao === 'local') {
+            if (!ultimoArquivoZip || !fs.existsSync(ultimoArquivoZip)) {
+                return res.status(400).json({ error: 'Envie o arquivo .zip antes de iniciar o motor local.' });
+            }
+
+            console.log('Extraindo arquivos do ZIP local no servidor...');
+            const zip = new AdmZip(ultimoArquivoZip);
+            zip.extractAllTo(extractDir, true);
+
+            console.log('Instalando dependências do bot extraído...');
+            exec('npm install', { cwd: extractDir }, (error) => {
+                if (error) console.error(`Aviso no npm install local: ${error.message}`);
+                
+                let mainFile = 'index.js';
+                if (!fs.existsSync(path.join(extractDir, 'index.js'))) {
+                    if (fs.existsSync(path.join(extractDir, 'bot.js'))) mainFile = 'bot.js';
+                    else if (fs.existsSync(path.join(extractDir, 'main.js'))) mainFile = 'main.js';
+                }
+
+                console.log(`Iniciando arquivo principal: ${mainFile}`);
+                botState.processRef = exec(`node ${mainFile}`, { cwd: extractDir });
+                botState.isRunning = true;
+
+                botState.processRef.stdout.on('data', (data) => console.log(`[Bot Ativo]: ${data}`));
+                botState.processRef.stderr.on('data', (data) => console.error(`[Bot Erro]: ${data}`));
+            });
+
+            return res.json({ success: true, status: 'online', message: 'Motor local extraído e sendo iniciado em segundo plano!' });
+        } 
         
-        <div class="diamond-container">
-            <div class="diamond"></div>
-        </div>
+        // Se a conexão for do tipo Nuvem (IA Bebê)
+        botState.isRunning = true;
+        res.json({ 
+            success: true, 
+            status: 'online', 
+            message: 'Dashboard sincronizado com a sua IA Bebê na Nuvem com sucesso!' 
+        });
 
-        <!-- Mecanismo de Upload do ZIP Local -->
-        <input type="file" id="fileInput" accept=".zip" style="display: none;">
-        <button type="button" onclick="document.getElementById('fileInput').click()">Upload de Arquivo .ZIP</button>
-        
-        <div class="progress-bar" id="progressBar">
-            <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <p id="uploadStatus" style="font-size: 14px; margin-top: 5px;"></p>
+    } catch (error) {
+        next(error);
+    }
+});
 
-        <!-- Mecanismo de Integração com a IA Bebê Nuvem -->
-        <div style="margin-top: 20px; padding: 15px; border: 1px dashed var(--accent-color); border-radius: 8px; background: rgba(0,0,0,0.2);">
-            <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--accent-color);">🔗 Conectar IA da Nuvem (Render)</p>
-            <input type="text" id="iaUrlInput" placeholder="Ex: https://onrender.com" style="width: 90%; padding: 10px; background: #111; border: 1px solid #333; color: #fff; border-radius: 6px;">
-            <button id="connectIaBtn" style="margin-top: 10px; background: var(--accent-color); color: #000;">Iniciar IA Bebê Nuvem</button>
-            <p id="iaStatusText" style="font-size: 12px; margin-top: 5px; color: #888;"></p>
-        </div>
+// Endpoint de Status do Bot
+app.get('/api/engine/status', (req, res) => {
+    res.json({ status: botState.isRunning ? 'online' : 'offline' });
+});
 
-        <!-- Disparador do Motor Geral -->
-        <button id="startBtn" disabled style="margin-top: 20px;">Iniciar Motor Principal</button>
-        <button onclick="window.location.href='/chat.html'" style="border-color: #fff; color: #fff; margin-top: 10px;">Ir para o Chat</button>
-    </div>
+// Buscar lista de arquivos do servidor da IA Bebê na Nuvem
+app.get('/api/dashboard/arquivos', async (req, res) => {
+    if (!botState.iaCloudUrl) return res.json([]);
+    try {
+        const respostaMotor = await fetch(`${botState.iaCloudUrl}/api/sistema/arquivos`);
+        const dadosArquivos = await respostaMotor.json();
+        res.json(dadosArquivos);
+    } catch (error) {
+        res.status(500).json({ error: true, message: "Não foi possível ler os arquivos remotos." });
+    }
+});
 
-    <script>
-        const fileInput = document.getElementById('fileInput');
-        const progressBar = document.getElementById('progressBar');
-        const progressFill = document.getElementById('progressFill');
-        const uploadStatus = document.getElementById('uploadStatus');
-        const startBtn = document.getElementById('startBtn');
-        
-        const iaUrlInput = document.getElementById('iaUrlInput');
-        const connectIaBtn = document.getElementById('connectIaBtn');
-        const iaStatusText = document.getElementById('iaStatusText');
+// Chat Inteligente Multimídia (Aceita Texto, Fotos, Áudios, Vídeos e Documentos)
+app.post('/api/chat', multer().single('media'), async (req, res, next) => {
+    try {
+        const { message } = req.body;
+        let respostaTexto = "";
 
-        iaUrlInput.value = "https://onrender.com";
+        // Se houver arquivo enviado no chat, identifica o tipo de mídia
+        if (req.file) {
+            const tipo = req.file.mimetype;
+            console.log(`Mídia recebida no chat: ${req.file.originalname} (${tipo})`);
+        }
 
-        connectIaBtn.addEventListener('click', async () => {
-            const url = iaUrlInput.value.trim();
-            if(!url) return alert('Insira o link do seu Render.');
-            iaStatusText.innerText = "Conectando e acordando a IA Bebê...";
-            iaStatusText.style.color = "#fff";
-
+        // Se estiver conectado à IA Bebê na Nuvem, encaminha os dados
+        if (botState.tipoConexao === 'nuvem' && botState.iaCloudUrl) {
             try {
-                const response = await fetch('/api/ia/conectar', {
+                const respostaNuvem = await fetch(`${botState.iaCloudUrl}/api/mensagem`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url })
+                    body: JSON.stringify({ 
+                        mensagem: message || `[Arquivo de Mídia Enviado]`,
+                        origem: "dashboard"
+                    })
                 });
-                const data = await response.json();
-                if(data.success) {
-                    iaStatusText.innerText = "IA Bebê Conectada com Sucesso!";
-                    iaStatusText.style.color = "#2ecc71";
-                    startBtn.disabled = false;
-                }
+                const dadosIa = await respostaNuvem.json();
+                respostaTexto = dadosIa.resposta || dadosIa.message || "Processado pela IA Bebê.";
             } catch (err) {
-                iaStatusText.innerText = "Erro ao conectar.";
-                iaStatusText.style.color = "#e74c3c";
+                respostaTexto = `[IA Bebê Nuvem]: Recebi o comando, mas o link externo não respondeu.`;
             }
-        });
+        } else {
+            // Resposta simulada para o motor local do ZIP
+            respostaTexto = req.file 
+                ? `Motor local processou sua mídia: ${req.file.originalname}`
+                : `DiamanteBot Local respondeu para: "${message}"`;
+        }
 
-        fileInput.addEventListener('change', async () => {
-            const file = fileInput.files[0];
-            if (!file) return;
+        res.json({ text: respostaTexto, timestamp: new Date().toISOString() });
+    } catch (error) {
+        next(error);
+    }
+});
 
-            progressBar.style.display = 'block';
-            progressFill.style.width = '0%';
-            uploadStatus.innerText = 'Enviando ZIP...';
+// Tratamento de Erros Centralizado (Evita quebras de código com DOCTYPE/HTML)
+app.use((err, req, res, next) => {
+    console.error('Erro:', err.stack);
+    res.status(500).json({ error: true, message: 'Erro interno no processamento do motor.' });
+});
 
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/api/upload', true);
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    progressFill.style.width = (e.loaded / e.total) * 100 + '%';
-                }
-            };
-            xhr.onload = function() {
-                const res = JSON.parse(xhr.responseText);
-                if (xhr.status === 200 && res.success) {
-                    uploadStatus.innerText = 'Sucesso: ZIP Pronto!';
-                    uploadStatus.style.color = '#2ecc71';
-                    startBtn.disabled = false;
-                }
-            };
-            xhr.send(formData);
-        });
-
-        startBtn.addEventListener('click', async () => {
-            const response = await fetch('/api/engine/start', { method: 'POST' });
-            const data = await response.json();
-            if(data.success) {
-                alert(data.message);
-                window.location.href = '/chat.html';
-            }
-        });
-    </script>
-</body>
-</html>
+app.listen(PORT, () => {
+    console.log(`Servidor ativo na porta ${PORT}`);
+});
