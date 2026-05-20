@@ -1,127 +1,228 @@
 :root {
-    --bg-color: #0b0c10;
-    --card-bg: #1f2833;
-    --accent-color: #66fcf1;
+    --bg-color: #060709;
+    --card-bg: #131722;
+    --accent-color: #00f2fe; /* Azul Diamante Neon */
+    --accent-white: #ffffff; /* Linhas Brancas */
     --text-main: #ffffff;
-    --text-muted: #c5a059;
-    --success: #2ecc71;
+    --text-muted: #8a99ad;
+    --success: #00e676;
+    --danger: #ff1744;
 }
 
 body {
     margin: 0;
-    font-family: 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-main);
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
 .container {
     background: var(--card-bg);
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    width: 450px;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 242, 254, 0.1);
+    width: 100%;
+    max-width: 480px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(0, 242, 254, 0.15);
+    box-sizing: border-box;
 }
 
+/* ==========================================================================
+   💎 NOVO VISUAL PREMIUM: DIAMANTE 3D COM LINHAS BRANCAS E AZUIS NEON
+   ========================================================================== */
 .diamond-container {
-    margin: 20px auto;
-    width: 100px;
-    height: 100px;
+    margin: 40px auto;
+    width: 120px;
+    height: 120px;
     position: relative;
-    perspective: 400px;
+    perspective: 600px;
 }
 
 .diamond {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #1c1c1c 0%, #000000 100%);
+    position: absolute;
+    transform-style: preserve-3d;
+    animation: spinDiamond 6s infinite linear;
+}
+
+/* Gerador das faces poligonais do diamante */
+.diamond::before, .diamond::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 242, 254, 0.12) 100%);
+    
+    /* Desenho geométrico do Diamante Lapidado */
     clip-path: polygon(50% 0%, 100% 35%, 50% 100%, 0% 35%);
-    box-shadow: 0 0 20px var(--accent-color);
-    animation: rotateDiamond 4s infinite linear;
-    border: 1px solid var(--accent-color);
+    
+    /* Contornos combinados: Linhas brancas tridimensionais e brilho azul */
+    border: 1.5px solid var(--accent-white);
+    filter: drop-shadow(0 0 8px var(--accent-color));
 }
 
-@keyframes rotateDiamond {
-    0% { transform: rotateY(0deg) rotateX(10deg); }
-    100% { transform: rotateY(360deg) rotateX(10deg); }
+.diamond::after {
+    transform: rotateY(90deg);
+    border-color: var(--accent-color);
 }
 
+@keyframes spinDiamond {
+    0% { transform: rotateY(0deg) rotateX(15deg); }
+    50% { transform: rotateY(180deg) rotateX(-5deg); }
+    100% { transform: rotateY(360deg) rotateX(15deg); }
+}
+
+/* ==========================================================================
+   🎛️ ESTILOS DOS COMPONENTES E GAVETAS ADICIONADOS
+   ========================================================================== */
 button {
     background: transparent;
     border: 2px solid var(--accent-color);
     color: var(--accent-color);
-    padding: 12px 24px;
-    border-radius: 8px;
+    padding: 12px 20px;
+    border-radius: 10px;
     cursor: pointer;
     font-weight: bold;
-    transition: 0.3s;
+    font-size: 14px;
+    transition: all 0.3s ease;
     width: 100%;
-    margin-top: 15px;
+    box-sizing: border-box;
 }
 
 button:hover:not(:disabled) {
     background: var(--accent-color);
-    color: #000;
+    color: #000000;
+    box-shadow: 0 0 15px var(--accent-color);
 }
 
 button:disabled {
-    border-color: #555;
-    color: #555;
+    border-color: #2c3545;
+    color: #4e5d78;
     cursor: not-allowed;
 }
 
 .progress-bar {
     width: 100%;
-    background-color: #111;
-    border-radius: 10px;
+    background-color: #090d14;
+    border-radius: 20px;
     margin: 15px 0;
     display: none;
+    border: 1px solid #1c2331;
+    overflow: hidden;
 }
 
 .progress-fill {
     width: 0%;
-    height: 10px;
-    background-color: var(--accent-color);
-    border-radius: 10px;
-    transition: width 0.2s;
+    height: 8px;
+    background: linear-gradient(90deg, #00f2fe, #4facfe);
+    box-shadow: 0 0 10px var(--accent-color);
+    transition: width 0.1s linear;
 }
 
+/* Elementos do Chat Multimídia */
 .chat-box {
-    height: 300px;
-    background: #11141a;
-    border-radius: 8px;
+    height: 280px;
+    background: #090d14;
+    border-radius: 12px;
     overflow-y: auto;
     padding: 15px;
     text-align: left;
-    margin-bottom: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .status-dot {
-    width: 12px;
-    height: 12px;
-    background-color: #7f8c8d;
+    width: 10px;
+    height: 10px;
+    background-color: #546e7a;
     border-radius: 50%;
     display: inline-block;
-    margin-right: 8px;
+    margin-right: 6px;
+    transition: all 0.3s ease;
 }
 
-.status-online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-online { 
+    background-color: var(--success); 
+    box-shadow: 0 0 10px var(--success); 
+}
 
 .chat-input-area {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 input[type="text"] {
     flex: 1;
-    background: #111;
-    border: 1px solid #333;
-    color: white;
+    background: #090d14;
+    border: 1px solid #232d3f;
+    color: #ffffff;
+    padding: 12px;
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+    transition: border 0.3s;
+}
+
+input[type="text"]:focus {
+    border-color: var(--accent-color);
+}
+
+/* Áudio player nativo estilizado premium */
+audio {
+    width: 100%;
+    margin-top: 5px;
+    max-height: 32px;
+}
+
+/* Terminal de comando integrado */
+.terminal-console {
+    background: #020204;
+    border: 1px solid #1a2233;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #33ff33; /* Verde Hacker */
     padding: 10px;
     border-radius: 8px;
+    text-align: left;
+    max-height: 100px;
+    overflow-y: auto;
+    margin-top: 5px;
+}
+
+/* Lista de Arquivos Avançada */
+.file-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.file-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.btn-delete-file {
+    background: transparent !important;
+    border: none !important;
+    color: var(--danger) !important;
+    font-size: 14px !important;
+    cursor: pointer !important;
+    width: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-weight: normal !important;
+}
+
+.btn-delete-file:hover {
+    filter: drop-shadow(0 0 4px var(--danger));
+    box-shadow: none !important;
 }
