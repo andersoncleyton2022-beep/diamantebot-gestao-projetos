@@ -15,15 +15,25 @@
             <div class="diamond"></div>
         </div>
 
+        <!-- Parte de Upload de Arquivo Local -->
         <input type="file" id="fileInput" style="display: none;">
-        <button type="button" onclick="document.getElementById('fileInput').click()">Upload de Arquivo</button>
+        <button type="button" onclick="document.getElementById('fileInput').click()">Upload de Arquivo .ZIP</button>
         
         <div class="progress-bar" id="progressBar">
             <div class="progress-fill" id="progressFill"></div>
         </div>
         <p id="uploadStatus" style="font-size: 14px; margin-top: 5px;"></p>
 
-        <button id="startBtn" disabled>Iniciar Motor</button>
+        <!-- NOVO: Conexão Direta com IA na Nuvem (Render) -->
+        <div style="margin-top: 20px; padding: 15px; border: 1px dashed var(--accent-color); border-radius: 8px; background: rgba(0,0,0,0.2);">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--accent-color);">🔗 Conectar IA da Nuvem (Render)</p>
+            <input type="text" id="iaUrlInput" placeholder="Ex: https://motordiamantebot.onrender.com" style="width: 90%; padding: 10px; background: #111; border: 1px solid #333; color: #fff; border-radius: 6px;">
+            <button id="connectIaBtn" style="margin-top: 10px; background: var(--accent-color); color: #000;">Iniciar IA Bebê Nuvem</button>
+            <p id="iaStatusText" style="font-size: 12px; margin-top: 5px; color: #888;"></p>
+        </div>
+
+        <!-- Botão de Inicialização Geral -->
+        <button id="startBtn" disabled style="margin-top: 20px;">Iniciar Motor Principal</button>
         <button onclick="window.location.href='/chat.html'" style="border-color: #fff; color: #fff; margin-top: 10px;">Ir para o Chat</button>
     </div>
 
@@ -33,7 +43,45 @@
         const progressFill = document.getElementById('progressFill');
         const uploadStatus = document.getElementById('uploadStatus');
         const startBtn = document.getElementById('startBtn');
+        
+        const iaUrlInput = document.getElementById('iaUrlInput');
+        const connectIaBtn = document.getElementById('connectIaBtn');
+        const iaStatusText = document.getElementById('iaStatusText');
 
+        // Configuração automática se você já deixar o link salvo
+        iaUrlInput.value = "https://motordiamantebot.onrender.com";
+
+        // AÇÃO: Iniciar IA Bebê na Nuvem pelo Link
+        connectIaBtn.addEventListener('click', async () => {
+            const url = iaUrlInput.value.trim();
+            if(!url) return alert('Por favor, insira o link do seu Render.');
+
+            iaStatusText.innerText = "Conectando e acordando a IA Bebê na nuvem...";
+            iaStatusText.style.color = "#fff";
+
+            try {
+                const response = await fetch('/api/ia/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                const data = await response.json();
+
+                if(data.success) {
+                    iaStatusText.innerText = "IA Bebê Conectada com Sucesso!";
+                    iaStatusText.style.color = "#2ecc71";
+                    startBtn.disabled = false; // Ativa o botão de ligar o motor
+                } else {
+                    iaStatusText.innerText = "Erro ao vincular: " + data.message;
+                    iaStatusText.style.color = "#e74c3c";
+                }
+            } catch (err) {
+                iaStatusText.innerText = "Erro de rede ao conectar com a IA.";
+                iaStatusText.style.color = "#e74c3c";
+            }
+        });
+
+        // Upload de Arquivo Local (Mantido caso queira usar arquivos)
         fileInput.addEventListener('change', async () => {
             const file = fileInput.files[0];
             if (!file) return;
@@ -41,57 +89,34 @@
             progressBar.style.display = 'block';
             progressFill.style.width = '0%';
             uploadStatus.innerText = 'Enviando...';
-            uploadStatus.style.color = '#fff';
 
             const formData = new FormData();
             formData.append('file', file);
 
-            try {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', '/api/upload', true);
-
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = (e.loaded / e.total) * 100;
-                        progressFill.style.width = percent + '%';
-                    }
-                };
-
-                xhr.onload = function() {
-                    const res = JSON.parse(xhr.responseText);
-                    if (xhr.status === 200 && res.success) {
-                        uploadStatus.innerText = 'Sucesso: Motor Pronto!';
-                        uploadStatus.style.color = '#2ecc71';
-                        startBtn.disabled = false;
-                    } else {
-                        throw new Error(res.message || 'Erro no upload.');
-                    }
-                };
-
-                xhr.onerror = () => { throw new Error('Erro de conexão.'); };
-                xhr.send(formData);
-
-            } catch (err) {
-                uploadStatus.innerText = err.message;
-                uploadStatus.style.color = '#e74c3c';
-            }
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload', true);
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    progressFill.style.width = (e.loaded / e.total) * 100 + '%';
+                }
+            };
+            xhr.onload = function() {
+                const res = JSON.parse(xhr.responseText);
+                if (xhr.status === 200 && res.success) {
+                    uploadStatus.innerText = 'Sucesso: Arquivo Pronto!';
+                    uploadStatus.style.color = '#2ecc71';
+                    startBtn.disabled = false;
+                }
+            };
+            xhr.send(formData);
         });
 
-        // Configuração do botão para disparar o seu link do Render
         startBtn.addEventListener('click', async () => {
-            try {
-                // Dispara a API interna para começar o motor do bot
-                const response = await fetch('/api/engine/start', { method: 'POST' });
-                const data = await response.json();
-                
-                if(data.success) {
-                    alert(data.message);
-                    // Abre o link do seu motor em segundo plano/nova aba e leva o usuário para o chat
-                    window.open('https://motordiamantebot.onrender.com', '_blank');
-                    window.location.href = '/chat.html';
-                }
-            } catch (error) {
-                console.error("Erro ao iniciar o motor:", error);
+            const response = await fetch('/api/engine/start', { method: 'POST' });
+            const data = await response.json();
+            if(data.success) {
+                alert(data.message);
+                window.location.href = '/chat.html';
             }
         });
     </script>
