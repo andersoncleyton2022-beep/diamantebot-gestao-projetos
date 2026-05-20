@@ -7,35 +7,84 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container" id="chatContainer" style="width: 600px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <div class="container" id="chatContainer" style="width: 95%; max-width: 900px; display: flex; flex-direction: column; gap: 15px;">
+        
+        <!-- Cabeçalho com Foto Clicável do Bot e Status Dinâmico -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #333;">
             <div style="display: flex; align-items: center;">
-                <img id="botAvatar" src="https://placehold.co" style="border-radius: 50%; margin-right: 10px; width: 40px; height: 40px; border: 1px solid #66fcf1;">
-                <h3 style="margin: 0;">DiamanteBot Chat</h3>
+                <img id="botAvatar" src="https://placehold.co" style="border-radius: 50%; margin-right: 10px; width: 40px; height: 40px; border: 2px solid var(--accent-color); cursor: pointer;" title="Clique para mudar a foto do Bot" onclick="document.getElementById('avatarInput').click()">
+                <h3 style="margin: 0; font-size: 16px; letter-spacing: 0.5px;">DiamanteBot Chat</h3>
             </div>
             <div>
                 <span class="status-dot" id="statusDot"></span>
-                <span id="statusText" style="font-size: 14px;">Verificando...</span>
+                <span id="statusText" style="font-size: 14px; font-weight: 500;">Verificando...</span>
             </div>
         </div>
 
-        <div class="chat-box" id="chatBox"></div>
+        <!-- Área de Conteúdo Principal (Arquivos + Chat + Comandos) -->
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; text-align: left;">
+            
+            <!-- Coluna Esquerda: Arquivos e Comandos Rápidos -->
+            <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 15px;">
+                
+                <!-- 📁 GERENCIADOR DE ARQUIVOS COM BOTÃO EXCLUIR -->
+                <div style="background: #0c1017; border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="color: var(--accent-color); font-weight: bold; font-size: 13px;">📁 Arquivos na Nuvem (IA)</span>
+                        <button onclick="carregarArquivos()" style="width: auto; margin: 0; padding: 4px 8px; font-size: 11px;">🔄 Atualizar</button>
+                    </div>
+                    <div id="listaArquivos" style="font-size: 13px; color: #aaa; overflow-y: auto; max-height: 180px; display: flex; flex-direction: column; gap: 4px;">
+                        Buscando arquivos ativos...
+                    </div>
+                </div>
 
-        <div class="chat-input-area">
-            <input type="text" id="msgInput" placeholder="Digite uma mensagem...">
-            <input type="file" id="mediaInput" accept="image/*,video/*,audio/*,application/*" style="display: none;">
-            <button onclick="document.getElementById('mediaInput').click()" style="width: auto; margin: 0; padding: 10px;">📎</button>
-            <button id="sendBtn" style="width: auto; margin: 0; padding: 10px 20px;">Enviar</button>
+                <!-- 🎛️ PAINEL DE COMANDOS RÁPIDOS -->
+                <div style="background: #0c1017; border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.05);">
+                    <span style="color: var(--accent-color); font-weight: bold; font-size: 13px; display: block; margin-bottom: 10px;">🎛️ Comandos de Controle</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="comandoRapido('reiniciar')" style="padding: 8px; font-size: 12px; border-color: #f39c12; color: #f39c12;">🛑 Reiniciar Bot</button>
+                        <button onclick="comandoRapido('limpar-cache')" style="padding: 8px; font-size: 12px; border-color: var(--danger); color: var(--danger);">🧹 Limpar Cache</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Coluna Direita: Janela de Chat e Terminal -->
+            <div style="flex: 2; min-width: 300px; display: flex; flex-direction: column; gap: 10px;">
+                
+                <!-- Caixa de Chat Multimídia -->
+                <div class="chat-box" id="chatBox" style="height: 260px; background-size: cover; background-position: center;"></div>
+                
+                <!-- Campo de Entrada de Mensagens -->
+                <div class="chat-input-area">
+                    <input type="text" id="msgInput" placeholder="Digite uma mensagem...">
+                    <input type="file" id="mediaInput" accept="image/*,video/*,audio/*,application/*" style="display: none;" onchange="atualizarBotaoMidia()">
+                    <button id="clipBtn" onclick="document.getElementById('mediaInput').click()" style="width: auto; margin: 0; padding: 12px;" title="Anexar Foto/Áudio/Vídeo/Documento">📎</button>
+                    <button id="sendBtn" style="width: auto; margin: 0; padding: 12px 20px;">Enviar</button>
+                </div>
+                <div id="nomeArquivoAnexo" style="font-size: 11px; color: var(--accent-color); margin-top: -5px; padding-left: 5px;"></div>
+
+                <!-- 📟 MINI TERMINAL DE LOGS AO VIVO -->
+                <div style="margin-top: 5px;">
+                    <span style="font-size: 11px; color: #666; font-weight: bold; display: block; margin-bottom: 2px;">📟 TERMINAL DE EVENTOS DA NUVEM</span>
+                    <div class="terminal-console" id="terminalConsole">
+                        [Dashboard]: Console inicializado. Aguardando eventos...
+                    </div>
+                </div>
+
+            </div>
+
         </div>
 
-        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; display: flex; gap: 10px; font-size: 12px;">
-            <label style="cursor:pointer; color: var(--accent-color)">🖼️ Wallpaper
-                <input type="file" id="bgInput" accept="image/*" style="display:none;" onchange="changeBg(this)">
-            </label>
-            <label style="cursor:pointer; color: var(--accent-color)">👤 Foto Bot
+        <!-- Rodapé de Configuração Visual e Histórico -->
+        <div style="padding-top: 10px; border-top: 1px solid #333; display: flex; gap: 15px; font-size: 12px; justify-content: space-between; flex-wrap: wrap;">
+            <div style="display: flex; gap: 12px;">
+                <label style="cursor:pointer; color: var(--accent-color)">🖼️ Mudar Wallpaper
+                    <input type="file" id="bgInput" accept="image/*" style="display:none;" onchange="changeBg(this)">
+                </label>
                 <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="changeAvatar(this)">
-            </label>
-            <span style="cursor:pointer; color: #fff; margin-left: auto;" onclick="downloadLogs()">📥 Baixar Logs</span>
+            </div>
+            <span style="cursor:pointer; color: #fff;" onclick="downloadLogs()">📥 Baixar Histórico (.json)</span>
         </div>
     </div>
 
@@ -44,23 +93,136 @@
         const msgInput = document.getElementById('msgInput');
         const mediaInput = document.getElementById('mediaInput');
         const sendBtn = document.getElementById('sendBtn');
+        const listaArquivos = document.getElementById('listaArquivos');
+        const nomeArquivoAnexo = document.getElementById('nomeArquivoAnexo');
+        const terminalConsole = document.getElementById('terminalConsole');
         let history = [];
 
+        // Adiciona mensagens ao Mini Terminal Visual
+        function addTerminalLog(message) {
+            const time = new Date().toLocaleTimeString();
+            terminalConsole.innerHTML += `<br><span style="color:#888;">[${time}]</span> ${message}`;
+            terminalConsole.scrollTop = terminalConsole.scrollHeight;
+        }
+
+        // Verifica o Status do Bot (Online/Offline)
         async function checkStatus() {
-            const res = await fetch('/api/engine/status');
-            const data = await res.json();
-            if(data.status === 'online') {
-                document.getElementById('statusDot').classList.add('status-online');
-                document.getElementById('statusText').innerText = 'Online';
-            } else {
+            try {
+                const res = await fetch('/api/engine/status');
+                const data = await res.json();
+                if(data.status === 'online') {
+                    document.getElementById('statusDot').className = 'status-dot status-online';
+                    document.getElementById('statusText').innerText = 'Bot Online';
+                } else {
+                    document.getElementById('statusDot').className = 'status-dot';
+                    document.getElementById('statusText').innerText = 'Bot Offline';
+                }
+            } catch(e) {
                 document.getElementById('statusText').innerText = 'Offline';
             }
         }
 
-        async function appendMessage(sender, text) {
+        // Carrega a Lista de Arquivos da IA na Nuvem
+        async function carregarArquivos() {
+            listaArquivos.innerHTML = "Buscando dados...";
+            try {
+                const res = await fetch('/api/dashboard/arquivos');
+                const dados = await res.json();
+                const arquivos = Array.isArray(dados) ? dados : (dados.arquivos || dados.files || []);
+
+                if(arquivos.length === 0) {
+                    listaArquivos.innerHTML = "<span style='color:#555;'>Nenhum documento na nuvem.</span>";
+                    return;
+                }
+
+                listaArquivos.innerHTML = "";
+                arquivos.forEach((arq, index) => {
+                    const nome = typeof arq === 'object' ? arq.nome || arq.name : arq;
+                    
+                    const row = document.createElement('div');
+                    row.className = 'file-row';
+                    row.innerHTML = `
+                        <span style="color:#eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">📄 ${nome}</span>
+                        <button class="btn-delete-file" onclick="deletarArquivo('${nome}')" title="Deletar Arquivo">❌</button>
+                    `;
+                    listaArquivos.appendChild(row);
+                });
+            } catch (error) {
+                listaArquivos.innerHTML = "<span style='color:var(--danger);'>Sem conexão de arquivos.</span>";
+            }
+        }
+
+        // Função do Botão para Deletar Arquivo Individual
+        async function deletarArquivo(nome) {
+            if(!confirm(`Deseja realmente apagar o arquivo "${nome}" da nuvem?`)) return;
+            addTerminalLog(`Tentando deletar o arquivo: ${nome}...`);
+            try {
+                const res = await fetch(`/api/dashboard/arquivos/deletar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: nome })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    addTerminalLog(`Sucesso: ${nome} foi removido.`);
+                    carregarArquivos();
+                } else {
+                    addTerminalLog(`Erro ao deletar: ${data.message}`);
+                }
+            } catch (e) {
+                addTerminalLog(`Erro de rede ao tentar remover o arquivo.`);
+            }
+        }
+
+        // Aciona Comandos Rápidos (Reiniciar e Limpar Cache)
+        async function comandoRapido(tipo) {
+            addTerminalLog(`Executando comando: ${tipo.toUpperCase()}...`);
+            try {
+                const res = await fetch(`/api/engine/comando`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comando: tipo })
+                });
+                const data = await res.json();
+                addTerminalLog(`[Servidor]: ${data.message}`);
+                checkStatus();
+            } catch (e) {
+                addTerminalLog(`[Erro]: Falha ao processar o comando.`);
+            }
+        }
+
+        function atualizarBotaoMidia() {
+            if(mediaInput.files.length > 0) {
+                nomeArquivoAnexo.innerText = ` Anexo pronto: ${mediaInput.files[0].name}`;
+                document.getElementById('clipBtn').style.borderColor = "var(--success)";
+            } else {
+                nomeArquivoAnexo.innerText = "";
+            }
+        }
+
+        // Insere Mensagens e Mídias de forma inteligente no Painel do Celular
+        async function appendMessage(sender, text, fileObj = null) {
             const msgDiv = document.createElement('div');
-            msgDiv.style.margin = '5px 0';
-            msgDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            msgDiv.style.margin = '10px 0';
+            
+            let conteudoMidia = "";
+            
+            // Se houver arquivo anexado, renderiza visualmente dependendo do tipo
+            if (fileObj) {
+                const urlMidia = URL.createObjectURL(fileObj);
+                if (fileObj.type.startsWith('image/')) {
+                    conteudoMidia = `<br><img src="${urlMidia}" style="max-width: 100%; max-height: 150px; border-radius: 8px; margin-top: 5px; border: 1px solid #333;">`;
+                } else if (fileObj.type.startsWith('video/')) {
+                    conteudoMidia = `<br><video src="${urlMidia}" controls style="max-width: 100%; max-height: 150px; border-radius: 8px; margin-top: 5px;"></video>`;
+                } else if (fileObj.type.startsWith('audio/')) {
+                    // PLAYER DE ÁUDIO NATIVO ADICIONADO PERFEITAMENTE
+                    conteudoMidia = `<br><audio src="${urlMidia}" controls style="margin-top: 5px;"></audio>`;
+                } else {
+                    conteudoMidia = `<br><a href="${urlMidia}" download="${fileObj.name}" style="color:var(--accent-color); font-size:12px; display:inline-block; margin-top:5px;">📥 Baixar Documento (${fileObj.name})</a>`;
+                }
+            }
+
+            msgDiv.innerHTML = `<strong style="color:var(--accent-color)">${sender}:</strong> <span style="color:#fff">${text}</span>${conteudoMidia}`;
             chatBox.appendChild(msgDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
             history.push({ sender, text, time: new Date() });
@@ -75,16 +237,24 @@
             if (text) formData.append('message', text);
             if (file) formData.append('media', file);
 
-            appendMessage('Você', text || `[Arquivo: ${file.name}]`);
+            // Adiciona a mensagem com a mídia para o usuário ver na tela na hora
+            appendMessage('Você', text || `[Enviou o arquivo: ${file.name}]`, file);
+            
             msgInput.value = '';
             mediaInput.value = '';
+            nomeArquivoAnexo.innerText = "";
+            document.getElementById('clipBtn').style.borderColor = "var(--accent-color)";
+
+            addTerminalLog(`Enviando dados para o processamento da IA...`);
 
             try {
                 const response = await fetch('/api/chat', { method: 'POST', body: formData });
                 const data = await response.json();
                 appendMessage('DiamanteBot', data.text);
+                addTerminalLog(`Resposta da IA recebida com sucesso.`);
             } catch (e) {
-                appendMessage('Sistema', 'Erro ao enviar mensagem.');
+                appendMessage('Sistema', 'Erro ao processar mensagem.');
+                addTerminalLog(`[Erro]: Falha na comunicação do chat.`);
             }
         }
 
@@ -94,7 +264,10 @@
         function changeBg(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                reader.onload = (e) => document.getElementById('chatBox').style.backgroundImage = `url(${e.target.result})`;
+                reader.onload = (e) => {
+                    document.getElementById('chatBox').style.backgroundImage = `url(${e.target.result})`;
+                    addTerminalLog(`Papel de parede personalizado aplicado.`);
+                };
                 reader.readAsDataURL(input.files[0]);
             }
         }
@@ -102,7 +275,10 @@
         function changeAvatar(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                reader.onload = (e) => document.getElementById('botAvatar').src = e.target.result;
+                reader.onload = (e) => {
+                    document.getElementById('botAvatar').src = e.target.result;
+                    addTerminalLog(`Foto de perfil do Bot alterada.`);
+                };
                 reader.readAsDataURL(input.files[0]);
             }
         }
@@ -115,9 +291,13 @@
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
+            addTerminalLog(`Histórico de conversas exportado.`);
         }
 
+        // Execuções e Loops Automáticos de Monitoramento
+        setInterval(checkStatus, 5000);
         checkStatus();
+        carregarArquivos();
     </script>
 </body>
 </html>
