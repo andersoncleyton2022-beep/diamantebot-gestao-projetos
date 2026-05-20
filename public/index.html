@@ -77,12 +77,21 @@
             }
         });
 
+        // Configuração do botão para disparar o seu link do Render
         startBtn.addEventListener('click', async () => {
-            const response = await fetch('/api/engine/start', { method: 'POST' });
-            const data = await response.json();
-            if(data.success) {
-                alert(data.message);
-                window.location.href = '/chat.html';
+            try {
+                // Dispara a API interna para começar o motor do bot
+                const response = await fetch('/api/engine/start', { method: 'POST' });
+                const data = await response.json();
+                
+                if(data.success) {
+                    alert(data.message);
+                    // Abre o link do seu motor em segundo plano/nova aba e leva o usuário para o chat
+                    window.open('https://motordiamantebot.onrender.com', '_blank');
+                    window.location.href = '/chat.html';
+                }
+            } catch (error) {
+                console.error("Erro ao iniciar o motor:", error);
             }
         });
     </script>
