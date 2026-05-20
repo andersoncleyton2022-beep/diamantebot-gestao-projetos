@@ -37,15 +37,13 @@ const chavesGemini = [
     process.env.GEMINI_KEY_3 || "CHAVE_RESERVA_3"
 ];
 
-// ==========================================================================
-// 🛠️ FIX 1: INICIALIZAÇÃO CORRETA DO ESTADO (EVITA UNDEFINED NO PAINEL)
-// ==========================================================================
+// Inicialização Correta do Estado do Sistema
 let botState = { 
     isRunning: false, 
     iaCloudUrl: "https://onrender.com",
     tipoConexao: 'nuvem',
     processRef: null,
-    chaveAtivaIndex: 0 // Forçado a iniciar em 0 para sincronizar com o Dashboard
+    chaveAtivaIndex: 0 
 };
 let ultimoArquivoZip = null;
 
@@ -86,7 +84,6 @@ app.post('/api/engine/comando', async (req, res) => {
     const { comando } = req.body;
     try {
         if (comando === 'reiniciar') {
-            // Tenta dar um handshake de reinício no motor da Iara
             const respostaIara = await fetch(`${botState.iaCloudUrl}/ping`, { method: 'GET' }).catch(() => null);
             botState.isRunning = true;
             return res.json({ success: true, message: 'Comando enviado! Conexão com a Iara restabelecida.' });
@@ -97,11 +94,8 @@ app.post('/api/engine/comando', async (req, res) => {
     }
 });
 
-// ==========================================================================
-// 📁 FIX 3: FILTRO DE ARQUIVOS (IGNORA PASTAS DO SISTEMA NO BACKFALL)
-// ==========================================================================
+// Filtro de Arquivos do Painel Lateral
 app.get('/api/dashboard/arquivos', async (req, res) => {
-    // 1. Tenta buscar da nuvem da Iara primeiro
     if (botState.tipoConexao === 'nuvem' && botState.iaCloudUrl) {
         try {
             const controller = new AbortController();
@@ -115,14 +109,11 @@ app.get('/api/dashboard/arquivos', async (req, res) => {
         } catch (e) {}
     }
 
-    // 2. Fallback Físico Local com Filtros Avançados de Pastas
     try {
         const itens = fs.readdirSync(__dirname);
         const arquivosFiltrados = itens.filter(item => {
             const caminhoAbsoluto = path.join(__dirname, item);
             const dadosItem = fs.statSync(caminhoAbsoluto);
-            
-            // FILTRO REAL: Remove pastas pesadas ou estruturais para não poluir o celular
             return dadosItem.isFile() && 
                    item !== 'index.js' && 
                    item !== 'package.json' && 
@@ -140,7 +131,7 @@ app.post('/api/dashboard/arquivos/deletar', (req, res) => {
     try {
         const alvo = path.join(__dirname, filename);
         if (fs.existsSync(alvo)) {
-            fs.unlinkSync(alvo); // Deleta do HD do Render de verdade
+            fs.unlinkSync(alvo);
             return res.json({ success: true, message: `Arquivo ${filename} removido fisicamente.` });
         }
         res.status(404).json({ success: false, message: "Arquivo não localizado no disco." });
@@ -150,32 +141,30 @@ app.post('/api/dashboard/arquivos/deletar', (req, res) => {
 });
 
 // ==========================================================================
-// 💬 FIX 2 e 4: DEBUGGING REAL E VALIDAÇÃO DE ROTAS (RODÍZIO GEMINI ATIVO)
+// 💬 CHAT: IMPLEMENTAÇÃO DO SISTEMA DE PORTARIA / AUTENTICAÇÃO DUPLA
 // ==========================================================================
 app.post('/api/chat', multer().single('media'), async (req, res, next) => {
     const { message } = req.body;
     let respostaFinal = "";
     
-    // Configurações de Handshake e Tentativas (Retries)
     const maxTentativasRede = 3;
-    let urlDestinoReal = `${botState.iaCloudUrl}/api/mensagem`; // Rota exata solicitada
+    let urlDestinoReal = `${botState.iaCloudUrl}/api/mensagem`;
 
     for (let tentativa = 1; tentativa <= maxTentativasRede; tentativa++) {
         try {
-            // Pega a chave do rodízio baseada no índice ativo
             const tokenAtivo = chavesGemini[botState.chaveAtivaIndex];
-
-            // Configuração do Timeout de 10 segundos exigido
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            console.log(`[Handshake - Tentativa ${tentativa}/${maxTentativasRede}] Conectando a ${urlDestinoReal}`);
+            console.log(`[Handshake ${tentativa}/${maxTentativasRede}] Conectando a ${urlDestinoReal}`);
 
+            // Envio das credenciais completas exigidas na portaria da Iara
             const respostaNuvem = await fetch(urlDestinoReal, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${tokenAtivo}` // Envio do cabeçalho de autenticação
+                    'Authorization': 'Bearer DiamanteBot_2026_Privado_#777', // Chave única da Casa
+                    'X-Gemini-Key': tokenAtivo // Chave ativa repassada para o robô pensar
                 },
                 body: JSON.stringify({ 
                     mensagem: message || "Mídia transmitida", 
@@ -186,33 +175,27 @@ app.post('/api/chat', multer().single('media'), async (req, res, next) => {
 
             clearTimeout(timeoutId);
 
-            // Se a Iara estourou a cota do Gemini (Erro 429), faz o rodízio automático de chave imediatamente!
             if (respostaNuvem.status === 429) {
-                console.warn(`[Cota Esgotada - Chave ${botState.chaveAtivaIndex}] Alternando Load Balancing...`);
+                console.warn(`[Cota Gemini Esgotada] Rotacionando índice de chave...`);
                 botState.chaveAtivaIndex = (botState.chaveAtivaIndex + 1) % chavesGemini.length;
-                continue; // Pula para a próxima tentativa usando a nova chave de API
+                continue; 
             }
 
-            // Se der erro 502, 500 ou 404, captura o texto interno do erro da Iara
             if (!respostaNuvem.ok) {
                 const textoErroServidor = await respostaNuvem.text().catch(() => "Sem resposta textual");
                 respostaFinal = `Erro [${respostaNuvem.status}]: ${textoErroServidor || respostaNuvem.statusText}`;
-                break; // Interrompe as tentativas pois o servidor respondeu, apesar de ser um erro
+                break; 
             }
 
-            // Resposta obtida com sucesso!
             const dadosIa = await respostaNuvem.json();
             respostaFinal = dadosIa.resposta || dadosIa.text || dadosIa.message || JSON.stringify(dadosIa);
-            break; // Sai do laço pois deu tudo certo
+            break; 
 
         } catch (erroFetch) {
             console.error(`[Falha Tentativa ${tentativa}]: ${erroFetch.message}`);
-            
-            // Se foi a última tentativa e falhou por timeout ou rede fora do ar
             if (tentativa === maxTentativasRede) {
-                respostaFinal = `Erro [Rede/Timeout]: A Iara não respondeu após ${maxTentativasRede} tentativas de handshake. Detalhe: ${erroFetch.message}`;
+                respostaFinal = `Erro [Rede/Timeout]: A Iara não respondeu após os handshakes de rede. Detalhe: ${erroFetch.message}`;
             }
-            // Pequeno intervalo antes de tentar o próximo retry (ajuda o Render a acordar)
             await new Promise(r => setTimeout(r, 1000));
         }
     }
